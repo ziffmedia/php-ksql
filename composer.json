@@ -1,0 +1,30 @@
+{
+    "name": "ziffmedia/ksql",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "ZiffMedia\\Ksql\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Josh Butts",
+            "email": "josh.butts@ziffmedia.com"
+        }
+    ],
+    "require-dev": {
+        "pestphp/pest": "^1.22",
+        "symfony/var-dumper": "^6.2"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "require": {
+        "php": ">=8.1",
+        "symfony/http-client": "^6.2",
+        "amphp/http-client": "^4.6"
+    }
+}
