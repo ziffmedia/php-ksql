@@ -53,7 +53,7 @@ class Client
             $query .= ';';
         }
 
-        $response = $this->client->request('POST', "/query-streams", [
+        $response = $this->client->request('POST', "/query-stream", [
             'headers' => [
                 'Accept' => 'application/json'
             ],
@@ -109,7 +109,7 @@ class Client
                 ]
             ];
 
-            $responses[] = $this->client->request('POST', '/query-streams', [
+            $responses[] = $this->client->request('POST', '/query-stream', [
                 'body' => json_encode($requestBody),
                 'headers' => [
                     'Accept' => 'application/vnd.ksqlapi.delimited.v1'

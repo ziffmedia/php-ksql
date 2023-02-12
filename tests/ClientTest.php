@@ -5,6 +5,27 @@ use ZiffMedia\Ksql\PushQueryRow;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
+test('it_uses_the_streaming_api', function() {
+    $r = mockPullQueryResponse([["foo" => "bar"]]);
+    $m = new MockHttpClient([$r]);
+    $c = new Client("http://localhost", "user", "pass", $m);
+    try {
+        $c->query("SELECT * FROM test");
+    } catch (\Exception $e) {
+        // don't care if the client actually handles this request properly, only care if the request is right
+    }
+    expect($r->getRequestUrl())->toBe("http://localhost/query-stream");
+
+    $r = mockPushQueryResponse([["foo" => "bar"]]);
+    $m = new MockHttpClient([$r]);
+    $c = new Client("http://localhost", "user", "pass", $m);
+    try {
+        $c->stream("SELECT * FROM test EMIT CHANGES", fn() => null);
+    } catch (\Exception $e) {
+        // don't care if the client actually handles this request properly, only care if the request is right
+    }
+    expect($r->getRequestUrl())->toBe("http://localhost/query-stream");});
+
 test('it_creates_auth_headers', function() {
     $r = mockPullQueryResponse([["foo" => "bar"]]);
     $m = new MockHttpClient([$r]);
