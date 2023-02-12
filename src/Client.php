@@ -88,13 +88,17 @@ class Client
      */
     public function stream(string|array $query, callable|array $handler, Offset $offset = Offset::Earliest)
     {
-        if (stripos($query, 'emit changes') == false) {
-            throw new \InvalidArgumentException("Queries sent to the stream() should only be push queries. Use query() instead.");
-        }
-
         if(!is_array($query)) {
             $query = ['query' => $query];
         }
+
+        foreach ($query as &$q) {
+            if (stripos($q, 'emit changes') == false) {
+                throw new \InvalidArgumentException("Queries sent to the stream() should only be push queries. Use query() instead.");
+            }
+        }
+
+
 
         $responses = [];
         foreach ($query as $name => $sql) {
@@ -131,12 +135,17 @@ class Client
                         $headers[$queryName]["schema"] = $schema;
                     } else {
                         $row = new PushQueryRow(
+                            $queryName,
                             $query[$queryName],
                             $headers[$queryName]["queryId"],
                             $headers[$queryName]["schema"],
                             array_combine(array_keys($headers[$queryName]["schema"]), $content)
                         );
-                        $handler($row);
+                        if (is_array($handler)) {
+                            $handler[$queryName]($row);
+                        } else {
+                            $handler($row);
+                        }
                     }
                 }
             }
