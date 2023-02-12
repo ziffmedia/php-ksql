@@ -16,6 +16,22 @@ function queryResult(): PullQueryResult
     return $qrr;
 }
 
+test('it_should_force_lower_case_keys', function() {
+    $qrr = new PullQueryResult(
+        "SELECT email FROM users",
+        1234,
+        ['FOO' => 'string'],
+        [
+            ['FOO' => 'admin@example.com'],
+            ['FOO' => 'owner@example.com'],
+        ]
+    );
+    expect(array_keys($qrr->schema))->toBe(['foo']);
+    foreach ($qrr as $row) {
+        expect(array_keys($row))->toBe(['foo']);
+    }
+});
+
 test('it_should_be_iterable', function() {
     expect(is_iterable(queryResult()))->toBeTrue();
 });

@@ -11,7 +11,12 @@ class PullQueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
         public string $queryId,
         public array $schema,
         public array $data,
-    ) {}
+    ) {
+        $this->schema = array_change_key_case($this->schema);
+        foreach ($this->data as &$data) {
+            $data = array_change_key_case($data);
+        }
+    }
 
     public function getIterator(): Traversable
     {

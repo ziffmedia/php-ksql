@@ -16,3 +16,15 @@ test('it_should_support_array_access', function() {
     expect($r["foo"])->toBe("bar");
     expect($r["bar"])->toBe("baz");
 });
+
+test('it_should_force_lower_case_keys', function() {
+    $qrr = new PushQueryRow(
+        'test',
+        "SELECT email FROM users",
+        1234,
+        ['FOO' => 'string'],
+        ['FOO' => 'admin@example.com']
+    );
+    expect(array_keys($qrr->schema))->toBe(['foo']);
+    expect(array_keys($qrr->data))->toBe(['foo']);
+});

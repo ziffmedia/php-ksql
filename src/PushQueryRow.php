@@ -9,7 +9,10 @@ class PushQueryRow implements \ArrayAccess, \IteratorAggregate, \Countable
         public string $queryId,
         public array $schema,
         public array $data,
-    ) {}
+    ) {
+        $this->schema = array_change_key_case($this->schema);
+        $this->data = array_change_key_case($this->data);
+    }
 
     public function getIterator(): \Traversable
     {
