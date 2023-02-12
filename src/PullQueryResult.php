@@ -4,7 +4,7 @@ namespace ZiffMedia\Ksql;
 use Exception;
 use Traversable;
 
-class QueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
+class PullQueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
 {
     public function __construct(
         public string $query,
@@ -41,5 +41,10 @@ class QueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
     public function offsetUnset(mixed $offset): void
     {
         return; //read only
+    }
+
+    public function __get($key)
+    {
+        return $this->data[$key];
     }
 }

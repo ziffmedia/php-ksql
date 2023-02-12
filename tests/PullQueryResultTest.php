@@ -1,10 +1,10 @@
 <?php
-use ZiffMedia\Ksql\QueryResult;
-use ZiffMedia\Ksql\QueryResultRow;
+use ZiffMedia\Ksql\PullQueryResult;
+use ZiffMedia\Ksql\PushQueryRow;
 
-function queryResult(): QueryResult
+function queryResult(): PullQueryResult
 {
-    $qrr = new QueryResult(
+    $qrr = new PullQueryResult(
         "SELECT email FROM users",
         1234,
         ['email' => 'string'],

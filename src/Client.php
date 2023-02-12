@@ -40,10 +40,10 @@ class Client
     /**
      * @param string $query
      * @param callable|null $handler
-     * @return QueryResult[]|null
+     * @return PullQueryResult[]|null
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
-    public function query(string $query): QueryResult
+    public function query(string $query): PullQueryResult
     {
         if (stripos($query, 'emit changes') !== false) {
             throw new \InvalidArgumentException("Queries sent to the query() should only be pull queries. Use stream() instead.");
@@ -58,77 +58,88 @@ class Client
                 'Accept' => 'application/json'
             ],
             'body' => json_encode([
-                'ksql' => $query
+                'sql' => $query
             ])
         ]);
 
         $rows = $response->toArray();
-        array_pop($rows);
-        $header = array_shift($rows)["header"];
-        $schema = $header["schema"];
-        $columns = [];
-        foreach (explode(',', $schema) as $col) {
-            $split = explode('`', $col);
-            $columns[strtolower($split[1])] = trim(strtolower($split[2]));
-        }
+        $header = array_shift($rows);
+        $schema = array_combine($header['columnNames'], $header['columnTypes']);
+        $schema = array_map(fn($val) => strtolower($val), $schema);
 
-        $qrData = [];
-        foreach ($rows as $row) {
-            $qrr = new QueryResultRow(array_combine(array_keys($columns), $row["row"]["columns"]));
-            $qrData[] = $qrr;
-        }
-        $result = new QueryResult(
+        $rows = array_map(function($row) use ($schema) {
+            return array_combine(array_keys($schema), $row);
+        }, $rows);
+
+        $result = new PullQueryResult(
             $query,
             $header["queryId"],
-            $columns,
-            $qrData
+            $schema,
+            $rows
         );
         return $result;
     }
 
-    public function stream(string $query, callable $handler, Offset $offset = Offset::Earliest, $maxRecords = false)
+    /**
+     * @param string|string[] $query
+     * @param callable|callable[] $handler
+     * @param Offset $offset
+     * @return void
+     */
+    public function stream(string|array $query, callable|array $handler, Offset $offset = Offset::Earliest)
     {
-        $recordCounter = 0;
+        if (stripos($query, 'emit changes') == false) {
+            throw new \InvalidArgumentException("Queries sent to the stream() should only be push queries. Use query() instead.");
+        }
 
-        $headers = [
-            'Accept' => 'application/vnd.ksqlapi.delimited.v1'
-        ];
-        $fullRequestUri = $this->endpoint . '/query-stream';
+        if(!is_array($query)) {
+            $query = ['query' => $query];
+        }
 
         $responses = [];
-        foreach ($this->streamingQueries as $name => $config) {
-            $query = $config["query"];
-            $eventClass = $config["event_class"] ?? KsqlStreamChanged::class;
+        foreach ($query as $name => $sql) {
             $requestBody = [
-                'sql' => $query,
+                'sql' => $sql,
                 'streamsProperties' => [
                     'streams.auto.offset.reset' => $offset->value
                 ]
             ];
 
-            $responses[] = $client->request('POST', $fullRequestUri, [
+            $responses[] = $this->client->request('POST', '/query-streams', [
                 'body' => json_encode($requestBody),
+                'headers' => [
+                    'Accept' => 'application/vnd.ksqlapi.delimited.v1'
+                ],
                 'user_data' => [
                     'query_name' => $name,
-                    'event_class' => $eventClass
                 ]
             ]);
         }
 
-        try {
-            foreach ($client->stream($responses) as $response => $chunk) {
-                dump($client);
-                $userData = $response->getInfo('user_data');
-                if (!$chunk->isFirst() ||  $chunk->isLast()) {
-                    dump($chunk->getContent());
+        $headers = [];
+        foreach ($this->client->stream($responses) as $response => $chunk) {
+            $userData = $response->getInfo('user_data');
+            $queryName = $userData["query_name"];
+            $content = $chunk->getContent();
+            if (strlen($content)) {
+                $content = json_decode($content, true);
+                if (is_array($content)) {
+                    if (isset($content['queryId'])) {
+                        $headers[$queryName]["queryId"] = $content["queryId"];
+                        $schema = array_combine($content['columnNames'], $content['columnTypes']);
+                        $schema = array_map(fn($val) => strtolower($val), $schema);
+                        $headers[$queryName]["schema"] = $schema;
+                    } else {
+                        $row = new PushQueryRow(
+                            $query[$queryName],
+                            $headers[$queryName]["queryId"],
+                            $headers[$queryName]["schema"],
+                            array_combine(array_keys($headers[$queryName]["schema"]), $content)
+                        );
+                        $handler($row);
+                    }
                 }
             }
-        } catch (ServerException $e) {
-            // @todo do some laravel shit here
-            throw $e;
         }
-
-
-
     }
 }
