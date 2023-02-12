@@ -105,3 +105,62 @@ test("it_runs_simple_push_queries", function() {
     };
     $c->stream("SELECT * FROM test EMIT CHANGES", $handler);
 });
+
+test('it_runs_multiplexed_stream_queries_with_matched_handlers', function() {
+    $data1 = [["foo" => "bar"], ["foo" => "baz"]];
+    $data2 = [["bar" => "baz"], ["bar" => "foo"]];
+
+    $r1 = mockPushQueryResponse($data1);
+    $r2 = mockPushQueryResponse($data2);
+
+    $m = new MockHttpClient([$r1, $r2]);
+    $c = new Client(endpoint: "http://localhost", client: $m);
+
+    $handler1 = function($row) use (&$data1) {
+        $expected = current($data1);
+        expect($row["foo"])->toBe($expected["foo"]);
+        next($data1);
+    };
+
+    $handler2 = function($row) use (&$data2) {
+        $expected = current($data2);
+        expect($row["bar"])->toBe($expected["var"]);
+        next($data2);
+    };
+
+    $c->stream(
+        [
+            'test1' => "SELECT * FROM test EMIT CHANGES",
+            'test2' => "SELECT * FROM bar EMIT CHANGES"
+        ],
+        [
+            'test1' => $handler1,
+            'test2' => $handler2
+        ]
+    );
+});
+
+test('it_runs_multiplexed_stream_queries_with_a_single_handler', function() {
+    $data1 = [["foo" => "bar"], ["foo" => "baz"]];
+    $data2 = [["bar" => "baz"], ["bar" => "foo"]];
+
+    $r1 = mockPushQueryResponse($data1);
+    $r2 = mockPushQueryResponse($data2);
+
+    $m = new MockHttpClient([$r1, $r2]);
+    $c = new Client(endpoint: "http://localhost", client: $m);
+
+    $handler = function(PushQueryRow $row) use (&$data1, $data2) {
+        $expected = current(${$row->queryKey});
+        expect($row[key($expected)])->toBe($expected[key($expected)]);
+        next(${$row->queryKey});
+    };
+
+    $c->stream(
+        [
+            'data1' => "SELECT * FROM test EMIT CHANGES",
+            'data2' => "SELECT * FROM bar EMIT CHANGES"
+        ],
+        $handler
+    );
+});

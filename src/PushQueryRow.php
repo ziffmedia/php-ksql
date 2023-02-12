@@ -4,6 +4,7 @@ namespace ZiffMedia\Ksql;
 class PushQueryRow implements \ArrayAccess, \IteratorAggregate, \Countable
 {
     public function __construct(
+        public string $queryKey,
         public string $query,
         public string $queryId,
         public array $schema,
