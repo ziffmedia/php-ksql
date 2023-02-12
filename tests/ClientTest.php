@@ -4,6 +4,7 @@ use ZiffMedia\Ksql\PullQueryResult;
 use ZiffMedia\Ksql\PushQueryRow;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use ZiffMedia\Ksql\Offset;
 
 test('it_uses_the_streaming_api', function() {
     $r = mockPullQueryResponse([["foo" => "bar"]]);
@@ -114,6 +115,16 @@ test('it_sends_proper_push_query_content_type_header', function() {
     expect($r->getRequestOptions()['headers'])->toContain($expectedHeader);
 });
 
+
+test('it_properly_delimits_push_queries', function() {
+    $r = mockPushQueryResponse([["foo" => "bar"], ["foo" => "baz"]]);
+    $m = new MockHttpClient([$r]);
+    $c = new Client(endpoint: "http://localhost", client: $m);
+    $c->stream("SELECT * FROM foo EMIT CHANGES", function(PushQueryRow $r) {
+        expect($r->query)->toBe("SELECT * FROM foo EMIT CHANGES;");
+    });
+});
+
 test("it_runs_simple_push_queries", function() {
     $data = [["foo" => "bar"], ["foo" => "baz"]];
     $r = mockPushQueryResponse($data);
@@ -184,4 +195,17 @@ test('it_runs_multiplexed_stream_queries_with_a_single_handler', function() {
         ],
         $handler
     );
+});
+
+test('it_obeys_offsets_on_push_queries', function() {
+    $r = mockPushQueryResponse([["foo" => "bar"]]);
+    $m = new MockHttpClient([$r]);
+    $c = new Client("http://localhost", "user", "pass", $m);
+    try {
+        $c->stream("SELECT * FROM test EMIT CHANGES", fn() => null, Offset::Latest);
+    } catch (\Exception $e) {
+        // don't care if the client actually handles this request properly, only care if the request is right
+    }
+    expect($r->getRequestOptions()['body'])->toContain('streams.auto.offset');
+    expect($r->getRequestOptions()['body'])->toContain('latest');
 });

@@ -96,9 +96,11 @@ class Client
             if (stripos($q, 'emit changes') == false) {
                 throw new \InvalidArgumentException("Queries sent to the stream() should only be push queries. Use query() instead.");
             }
+
+            if (!str_ends_with($q,';')) {
+                $q .= ';';
+            }
         }
-
-
 
         $responses = [];
         foreach ($query as $name => $sql) {
