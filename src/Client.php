@@ -104,7 +104,7 @@ class Client
         foreach ($query as $name => $sql) {
             $requestBody = [
                 'sql' => $sql,
-                'streamsProperties' => [
+                'properties' => [
                     'streams.auto.offset.reset' => $offset->value
                 ]
             ];
