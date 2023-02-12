@@ -138,7 +138,7 @@ test('it_runs_multiplexed_stream_queries_with_matched_handlers', function() {
             'test2' => $handler2
         ]
     );
-})->skip();
+});
 
 test('it_runs_multiplexed_stream_queries_with_a_single_handler', function() {
     $data1 = [["foo" => "bar"], ["foo" => "baz"]];
