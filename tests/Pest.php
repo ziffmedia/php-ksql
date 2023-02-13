@@ -1,4 +1,5 @@
 <?php
+
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 function mockPullQueryResponse($rows)
@@ -9,13 +10,14 @@ function mockPullQueryResponse($rows)
     }
     array_unshift($rowVals,
         [
-            "queryId" => "testquery123",
-            "columnNames" => array_keys($rows[0]),
-            "columnTypes" => deriveDataTypesFromArrayValues($rows[0])
+            'queryId' => 'testquery123',
+            'columnNames' => array_keys($rows[0]),
+            'columnTypes' => deriveDataTypesFromArrayValues($rows[0]),
         ]
     );
 
     $body = json_encode($rowVals);
+
     return new MockResponse($body, ['http_code' => 200]);
 }
 
@@ -28,13 +30,13 @@ function mockPushQueryResponse($rows)
 
     $header = json_encode(
         [
-            "queryId" => "testquery123",
-            "columnNames" => array_keys($rows[0]),
-            "columnTypes" => deriveDataTypesFromArrayValues($rows[0])
+            'queryId' => 'testquery123',
+            'columnNames' => array_keys($rows[0]),
+            'columnTypes' => deriveDataTypesFromArrayValues($rows[0]),
         ]
     );
 
-    $body = function() use ($header, $rowVals) {
+    $body = function () use ($header, $rowVals) {
         yield $header;
         foreach ($rowVals as $rowVal) {
             yield json_encode($rowVal);
@@ -47,8 +49,9 @@ function mockPushQueryResponse($rows)
 function deriveDataTypesFromArrayValues($row)
 {
     $types = [];
-    foreach(array_values($row) as $val) {
+    foreach (array_values($row) as $val) {
         $types[] = strtoupper(get_debug_type($val));
     }
+
     return $types;
 }

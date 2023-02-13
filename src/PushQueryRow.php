@@ -1,4 +1,5 @@
 <?php
+
 namespace ZiffMedia\Ksql;
 
 class PushQueryRow implements \ArrayAccess, \IteratorAggregate, \Countable
@@ -36,12 +37,12 @@ class PushQueryRow implements \ArrayAccess, \IteratorAggregate, \Countable
 
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        return; // read only
+         // read only
     }
 
     public function offsetUnset(mixed $offset): void
     {
-        return; //read only
+         //read only
     }
 
     public function __get($key)

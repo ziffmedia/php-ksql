@@ -1,4 +1,5 @@
 <?php
+
 namespace ZiffMedia\Ksql;
 
 enum Offset: string

@@ -1,7 +1,7 @@
 <?php
+
 namespace ZiffMedia\Ksql;
 
-use Exception;
 use Traversable;
 
 class PullQueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
@@ -40,12 +40,12 @@ class PullQueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
 
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        return; // read only
+         // read only
     }
 
     public function offsetUnset(mixed $offset): void
     {
-        return; //read only
+         //read only
     }
 
     public function __get($key)
