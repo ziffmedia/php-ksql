@@ -37,12 +37,12 @@ class PushQueryRow implements \ArrayAccess, \IteratorAggregate, \Countable
 
     public function offsetSet(mixed $offset, mixed $value): void
     {
-         // read only
+        // read only
     }
 
     public function offsetUnset(mixed $offset): void
     {
-         //read only
+        //read only
     }
 
     public function __get($key)
