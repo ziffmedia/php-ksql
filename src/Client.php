@@ -2,6 +2,7 @@
 
 namespace ZiffMedia\Ksql;
 
+use InvalidArgumentException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -31,22 +32,10 @@ class Client
         }
     }
 
-    public function setHttpClient(HttpClientInterface $client): void
-    {
-        $this->client = $client;
-    }
-
-    /**
-     * @param  string  $query
-     * @param  callable|null  $handler
-     * @return PullQueryResult[]|null
-     *
-     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
-     */
     public function query(string $query): PullQueryResult
     {
         if (stripos($query, 'emit changes') !== false) {
-            throw new \InvalidArgumentException('Queries sent to the query() should only be pull queries. Use stream() instead.');
+            throw new InvalidArgumentException('Queries sent to the query() should only be pull queries. Use stream() instead.');
         }
 
         if (! str_ends_with($query, ';')) {
@@ -71,14 +60,12 @@ class Client
             return array_combine(array_keys($schema), $row);
         }, $rows);
 
-        $result = new PullQueryResult(
+        return new PullQueryResult(
             $query,
             $header['queryId'],
             $schema,
             $rows
         );
-
-        return $result;
     }
 
     /**
@@ -87,15 +74,15 @@ class Client
      * @param  Offset  $offset
      * @return void
      */
-    public function stream(string|array $query, callable|array $handler, Offset $offset = Offset::Earliest)
+    public function stream(string|array $query, callable|array $handler, Offset $offset = Offset::EARLIEST): void
     {
         if (! is_array($query)) {
             $query = ['query' => $query];
         }
 
         foreach ($query as &$q) {
-            if (stripos($q, 'emit changes') == false) {
-                throw new \InvalidArgumentException('Queries sent to the stream() should only be push queries. Use query() instead.');
+            if (stripos($q, 'emit changes') === false) {
+                throw new InvalidArgumentException('Queries sent to the stream() should only be push queries. Use query() instead.');
             }
 
             if (! str_ends_with($q, ';')) {
@@ -108,7 +95,7 @@ class Client
             $requestBody = [
                 'sql' => $sql,
                 'properties' => [
-                    'streams.auto.offset.reset' => $offset->value,
+                    'streams.auto.offset.reset' => strtolower($offset->name),
                 ],
             ];
 

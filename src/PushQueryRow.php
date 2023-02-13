@@ -2,7 +2,13 @@
 
 namespace ZiffMedia\Ksql;
 
-class PushQueryRow implements \ArrayAccess, \IteratorAggregate, \Countable
+use ArrayAccess;
+use ArrayIterator;
+use Countable;
+use IteratorAggregate;
+use Traversable;
+
+class PushQueryRow implements ArrayAccess, IteratorAggregate, Countable
 {
     public function __construct(
         public string $queryKey,
@@ -15,9 +21,9 @@ class PushQueryRow implements \ArrayAccess, \IteratorAggregate, \Countable
         $this->data = array_change_key_case($this->data);
     }
 
-    public function getIterator(): \Traversable
+    public function getIterator(): Traversable
     {
-        return new \ArrayIterator($this->data);
+        return new ArrayIterator($this->data);
     }
 
     public function count(): int

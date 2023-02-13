@@ -12,7 +12,7 @@ test('it_uses_the_streaming_api', function () {
     $c = new Client('http://localhost', 'user', 'pass', $m);
     try {
         $c->query('SELECT * FROM test');
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
     expect($r->getRequestUrl())->toBe('http://localhost/query-stream');
@@ -22,7 +22,7 @@ test('it_uses_the_streaming_api', function () {
     $c = new Client('http://localhost', 'user', 'pass', $m);
     try {
         $c->stream('SELECT * FROM test EMIT CHANGES', fn () => null);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
     expect($r->getRequestUrl())->toBe('http://localhost/query-stream');
@@ -34,7 +34,7 @@ test('it_creates_auth_headers', function () {
     $c = new Client('http://localhost', 'user', 'pass', $m);
     try {
         $c->query('SELECT * FROM test');
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
     $expectedHeader = 'Authorization: Basic '.base64_encode('user:pass');
@@ -47,7 +47,7 @@ test('it_does_not_create_auth_headers', function () {
     $c = new Client(endpoint: 'http://localhost', client: $m);
     try {
         $c->query('SELECT * FROM test');
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
     $expectedHeader = 'Authorization: Basic '.base64_encode('user:pass');
@@ -74,7 +74,7 @@ test('it_sends_proper_pull_query_content_type_header', function () {
     $c = new Client('http://localhost', 'user', 'pass', $m);
     try {
         $c->query('SELECT * FROM test');
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
     $expectedHeader = 'Accept: application/json';
@@ -109,7 +109,7 @@ test('it_sends_proper_push_query_content_type_header', function () {
     $c = new Client('http://localhost', 'user', 'pass', $m);
     try {
         $c->stream('SELECT * FROM test EMIT CHANGES', fn () => null);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
     $expectedHeader = 'Accept: application/vnd.ksqlapi.delimited.v1';
@@ -202,8 +202,8 @@ test('it_obeys_offsets_on_push_queries', function () {
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
     try {
-        $c->stream('SELECT * FROM test EMIT CHANGES', fn () => null, Offset::Latest);
-    } catch (\Exception $e) {
+        $c->stream('SELECT * FROM test EMIT CHANGES', fn () => null, Offset::LATEST);
+    } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
     expect($r->getRequestOptions()['body'])->toContain('streams.auto.offset');

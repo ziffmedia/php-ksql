@@ -2,9 +2,13 @@
 
 namespace ZiffMedia\Ksql;
 
+use ArrayAccess;
+use ArrayIterator;
+use Countable;
+use IteratorAggregate;
 use Traversable;
 
-class PullQueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
+class PullQueryResult implements IteratorAggregate, Countable, ArrayAccess
 {
     public function __construct(
         public string $query,
@@ -20,7 +24,7 @@ class PullQueryResult implements \IteratorAggregate, \Countable, \ArrayAccess
 
     public function getIterator(): Traversable
     {
-        return new \ArrayIterator($this->data);
+        return new ArrayIterator($this->data);
     }
 
     public function count(): int
