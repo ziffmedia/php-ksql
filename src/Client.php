@@ -69,33 +69,36 @@ class Client
     }
 
     /**
-     * @param  string|string[]  $query
-     * @param  callable|callable[]  $handler
-     * @param  Offset  $offset
+     * @param  PushQuery|PushQuery[]  $query
      * @return void
      */
-    public function stream(string|array $query, callable|array $handler, Offset $offset = Offset::EARLIEST): void
+    public function stream(array|PushQuery $query): void
     {
+        $queries = [];
         if (! is_array($query)) {
-            $query = ['query' => $query];
+            $queries[$query->name] = $query;
+        } else {
+            foreach ($query as $q) {
+                $queries[$q->name] = $q;
+            }
         }
 
-        foreach ($query as &$q) {
-            if (stripos($q, 'emit changes') === false) {
+        foreach ($queries as $name => $query) {
+            if (stripos($query->query, 'emit changes') === false) {
                 throw new InvalidArgumentException('Queries sent to the stream() should only be push queries. Use query() instead.');
             }
 
-            if (! str_ends_with($q, ';')) {
-                $q .= ';';
+            if (! str_ends_with($query->query, ';')) {
+                $query->query .= ';';
             }
         }
 
         $responses = [];
-        foreach ($query as $name => $sql) {
+        foreach ($queries as $query) {
             $requestBody = [
-                'sql' => $sql,
+                'sql' => $query->query,
                 'properties' => [
-                    'streams.auto.offset.reset' => strtolower($offset->name),
+                    'streams.auto.offset.reset' => strtolower($query->offset->name),
                 ],
             ];
 
@@ -105,12 +108,12 @@ class Client
                     'Accept' => 'application/vnd.ksqlapi.delimited.v1',
                 ],
                 'user_data' => [
-                    'query_name' => $name,
+                    'query_name' => $query->name,
                 ],
             ]);
         }
 
-        $headers = [];
+        $schemas = [];
         foreach ($this->client->stream($responses) as $response => $chunk) {
             $userData = $response->getInfo('user_data');
             $queryName = $userData['query_name'];
@@ -119,21 +122,18 @@ class Client
                 $content = json_decode($content, true);
                 if (is_array($content)) {
                     if (isset($content['queryId'])) {
-                        $headers[$queryName]['queryId'] = $content['queryId'];
+                        $queries[$queryName]->queryId = $content['queryId'];
                         $schema = array_combine($content['columnNames'], $content['columnTypes']);
                         $schema = array_map(fn ($val) => strtolower($val), $schema);
-                        $headers[$queryName]['schema'] = $schema;
+                        $schemas[$queryName] = $schema;
                     } else {
                         $row = new PushQueryRow(
-                            $queryName,
-                            $query[$queryName],
-                            $headers[$queryName]['queryId'],
-                            $headers[$queryName]['schema'],
-                            array_combine(array_keys($headers[$queryName]['schema']), $content)
+                            $queries[$queryName],
+                            $schemas[$queryName],
+                            array_combine(array_keys($schemas[$queryName]), $content)
                         );
-                        if (is_array($handler)) {
-                            $handler[$queryName]($row);
-                        } else {
+                        if (is_callable($queries[$queryName]->handler)) {
+                            $handler = $queries[$queryName]->handler;
                             $handler($row);
                         }
                     }

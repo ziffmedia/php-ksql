@@ -30,7 +30,7 @@ function mockPushQueryResponse($rows)
 
     $header = json_encode(
         [
-            'queryId' => 'testquery123',
+            'queryId' => 'testquery'.rand(1, 10),
             'columnNames' => array_keys($rows[0]),
             'columnTypes' => deriveDataTypesFromArrayValues($rows[0]),
         ]

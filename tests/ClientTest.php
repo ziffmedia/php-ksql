@@ -4,6 +4,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use ZiffMedia\Ksql\Client;
 use ZiffMedia\Ksql\Offset;
 use ZiffMedia\Ksql\PullQueryResult;
+use ZiffMedia\Ksql\PushQuery;
 use ZiffMedia\Ksql\PushQueryRow;
 
 test('it_uses_the_streaming_api', function () {
@@ -20,8 +21,9 @@ test('it_uses_the_streaming_api', function () {
     $r = mockPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn () => null);
     try {
-        $c->stream('SELECT * FROM test EMIT CHANGES', fn () => null);
+        $c->stream($pq);
     } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
@@ -92,7 +94,8 @@ test('it_throws_when_using_pull_queries_on_stream_method', function () {
     $r = mockPullQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
-    expect(fn () => $c->stream('SELECT * FROM foo', fn () => null))->toThrow(InvalidArgumentException::class);
+    $pq = new PushQuery('test', 'SELECT * FROM foo', fn () => null);
+    expect(fn () => $c->stream($pq))->toThrow(InvalidArgumentException::class);
 });
 
 test('it_properly_delimits_pull_queries', function () {
@@ -107,8 +110,9 @@ test('it_sends_proper_push_query_content_type_header', function () {
     $r = mockPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn () => null);
     try {
-        $c->stream('SELECT * FROM test EMIT CHANGES', fn () => null);
+        $c->stream($pq);
     } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }
@@ -120,9 +124,10 @@ test('it_properly_delimits_push_queries', function () {
     $r = mockPushQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
-    $c->stream('SELECT * FROM foo EMIT CHANGES', function (PushQueryRow $r) {
-        expect($r->query)->toBe('SELECT * FROM foo EMIT CHANGES;');
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function (PushQueryRow $r) {
+        expect($r->query->query)->toBe('SELECT * FROM foo EMIT CHANGES;');
     });
+    $c->stream($pq);
 });
 
 test('it_runs_simple_push_queries', function () {
@@ -130,12 +135,12 @@ test('it_runs_simple_push_queries', function () {
     $r = mockPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
-    $handler = function ($row) use (&$data) {
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
         $expected = current($data);
         expect($row['foo'])->toBe($expected['foo']);
         next($data);
-    };
-    $c->stream('SELECT * FROM test EMIT CHANGES', $handler);
+    });
+    $c->stream($pq);
 });
 
 test('it_runs_multiplexed_stream_queries_with_matched_handlers', function () {
@@ -160,14 +165,13 @@ test('it_runs_multiplexed_stream_queries_with_matched_handlers', function () {
         next($data2);
     };
 
+    $pq1 = new PushQuery('data1', 'SELECT * FROM test EMIT CHANGES', $handler1);
+    $pq2 = new PushQuery('data2', 'SELECT * FROM bar EMIT CHANGES', $handler2);
+
     $c->stream(
         [
-            'test1' => 'SELECT * FROM test EMIT CHANGES',
-            'test2' => 'SELECT * FROM bar EMIT CHANGES',
-        ],
-        [
-            'test1' => $handler1,
-            'test2' => $handler2,
+            $pq1,
+            $pq2,
         ]
     );
 });
@@ -183,26 +187,24 @@ test('it_runs_multiplexed_stream_queries_with_a_single_handler', function () {
     $c = new Client(endpoint: 'http://localhost', client: $m);
 
     $handler = function (PushQueryRow $row) use (&$data1, &$data2) {
-        $expected = current(${$row->queryKey});
+        $expected = current(${$row->query->name});
         expect($row[key($expected)])->toBe($expected[key($expected)]);
-        next(${$row->queryKey});
+        next(${$row->query->name});
     };
 
-    $c->stream(
-        [
-            'data1' => 'SELECT * FROM test EMIT CHANGES',
-            'data2' => 'SELECT * FROM bar EMIT CHANGES',
-        ],
-        $handler
-    );
+    $pq1 = new PushQuery('data1', 'SELECT * FROM test EMIT CHANGES', $handler);
+    $pq2 = new PushQuery('data2', 'SELECT * FROM bar EMIT CHANGES', $handler);
+
+    $c->stream([$pq1, $pq2]);
 });
 
 test('it_obeys_offsets_on_push_queries', function () {
     $r = mockPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn () => null, Offset::LATEST);
     try {
-        $c->stream('SELECT * FROM test EMIT CHANGES', fn () => null, Offset::LATEST);
+        $c->stream($pq);
     } catch (Exception $e) {
         // don't care if the client actually handles this request properly, only care if the request is right
     }

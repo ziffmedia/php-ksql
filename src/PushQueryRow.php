@@ -11,9 +11,7 @@ use Traversable;
 class PushQueryRow implements ArrayAccess, IteratorAggregate, Countable
 {
     public function __construct(
-        public string $queryKey,
-        public string $query,
-        public string $queryId,
+        public PushQuery $query,
         public array $schema,
         public array $data,
     ) {
