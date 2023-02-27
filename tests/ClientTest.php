@@ -224,3 +224,16 @@ test('it_should_continue_after_idle_timeouts', function() {
     });
     $c->stream($pq);
 });
+
+test('it_should_not_timeout_before', function() {
+    $data = [['foo' => 'bar'], '', ['foo' => 'baz']];
+    $r = mockPushQueryResponse($data);
+    $m = new MockHttpClient([$r]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
+        $expected = current($data);
+        expect($row['foo'])->toBe($expected['foo']);
+        next($data);
+    });
+    $c->stream($pq);
+});

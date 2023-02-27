@@ -114,7 +114,7 @@ class Client
         }
 
         $schemas = [];
-        foreach ($this->client->stream($responses, 5) as $response => $chunk) {
+        foreach ($this->client->stream($responses) as $response => $chunk) {
             $userData = $response->getInfo('user_data');
             $queryName = $userData['query_name'];
             if ($chunk->isTimeout()) {
