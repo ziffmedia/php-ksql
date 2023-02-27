@@ -25,7 +25,11 @@ function mockPushQueryResponse($rows)
 {
     $rowVals = [];
     foreach ($rows as $row) {
-        $rowVals[] = array_values($row);
+        if (is_array($row)) {
+            $rowVals[] = array_values($row);
+        } else {
+            $rowVals[] = $row;
+        }
     }
 
     $header = json_encode(
@@ -39,7 +43,12 @@ function mockPushQueryResponse($rows)
     $body = function () use ($header, $rowVals) {
         yield $header;
         foreach ($rowVals as $rowVal) {
-            yield json_encode($rowVal);
+            if (is_array($rowVal)) {
+                yield json_encode($rowVal);
+            } else {
+                yield $rowVal; // allow for timeout testing
+            }
+
         }
     };
 

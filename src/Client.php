@@ -114,9 +114,12 @@ class Client
         }
 
         $schemas = [];
-        foreach ($this->client->stream($responses) as $response => $chunk) {
+        foreach ($this->client->stream($responses, 5) as $response => $chunk) {
             $userData = $response->getInfo('user_data');
             $queryName = $userData['query_name'];
+            if ($chunk->isTimeout()) {
+                continue;
+            }
             $content = $chunk->getContent();
             if (strlen($content)) {
                 $content = json_decode($content, true);
