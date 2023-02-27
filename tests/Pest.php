@@ -48,7 +48,6 @@ function mockPushQueryResponse($rows)
             } else {
                 yield $rowVal; // allow for timeout testing
             }
-
         }
     };
 

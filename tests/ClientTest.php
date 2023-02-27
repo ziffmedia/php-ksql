@@ -212,7 +212,7 @@ test('it_obeys_offsets_on_push_queries', function () {
     expect($r->getRequestOptions()['body'])->toContain('latest');
 });
 
-test('it_should_continue_after_idle_timeouts', function() {
+test('it_should_continue_after_idle_timeouts', function () {
     $data = [['foo' => 'bar'], '', ['foo' => 'baz']];
     $r = mockPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
@@ -225,7 +225,7 @@ test('it_should_continue_after_idle_timeouts', function() {
     $c->stream($pq);
 });
 
-test('it_should_not_timeout_before', function() {
+test('it_should_not_timeout_before', function () {
     $data = [['foo' => 'bar'], '', ['foo' => 'baz']];
     $r = mockPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
