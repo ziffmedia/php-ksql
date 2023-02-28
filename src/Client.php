@@ -117,9 +117,9 @@ class Client
         foreach ($this->client->stream($responses) as $response => $chunk) {
             $userData = $response->getInfo('user_data');
             $queryName = $userData['query_name'];
-            if ($chunk->isTimeout()) {
-                continue;
-            }
+//            if ($chunk->isTimeout()) {
+//                continue;
+//            }
             $content = $chunk->getContent();
             if (strlen($content)) {
                 $content = json_decode($content, true);
