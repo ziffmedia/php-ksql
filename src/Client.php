@@ -3,7 +3,7 @@
 namespace ZiffMedia\Ksql;
 
 use InvalidArgumentException;
-use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\AmpHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Client
@@ -15,7 +15,7 @@ class Client
         protected HttpClientInterface|null $client = null
     ) {
         if (! $client) {
-            $this->client = HttpClient::create();
+            $this->client = new AmpHttpClient();
         }
 
         $this->client = $this->client->withOptions([
