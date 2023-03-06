@@ -98,7 +98,7 @@ class Client
             $requestBody = [
                 'sql' => $query->query,
                 'properties' => [
-                    'streams.auto.offset.reset' => strtolower($query->offset->name),
+                    'auto.offset.reset' => strtolower($query->offset->name),
                 ],
             ];
 
