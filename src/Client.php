@@ -4,6 +4,7 @@ namespace ZiffMedia\Ksql;
 
 use InvalidArgumentException;
 use Symfony\Component\HttpClient\AmpHttpClient;
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Client
@@ -15,7 +16,7 @@ class Client
         protected HttpClientInterface|null $client = null
     ) {
         if (! $client) {
-            $this->client = new AmpHttpClient();
+            $this->client = HttpClient::create();
         }
 
         $this->client = $this->client->withOptions([
@@ -114,12 +115,14 @@ class Client
         }
 
         $schemas = [];
-        foreach ($this->client->stream($responses) as $response => $chunk) {
+        $responseStream = $this->client->stream($responses);
+        foreach ($responseStream as $response => $chunk) {
             $userData = $response->getInfo('user_data');
             $queryName = $userData['query_name'];
-//            if ($chunk->isTimeout()) {
-//                continue;
-//            }
+            if ($chunk->isTimeout()) {
+                $responseStream[] = $this->client->stream($response);
+                continue;
+            }
             $content = $chunk->getContent();
             if (strlen($content)) {
                 $content = json_decode($content, true);
