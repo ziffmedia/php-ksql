@@ -265,4 +265,3 @@ test('it should handle multiplexed idle timeouts correctly', function () {
     $c->stream([$pq1, $pq2, $pq3]);
     expect($responseCount)->toBe(6);
 });
-

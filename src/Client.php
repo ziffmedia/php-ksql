@@ -3,7 +3,6 @@
 namespace ZiffMedia\Ksql;
 
 use InvalidArgumentException;
-use Symfony\Component\HttpClient\AmpHttpClient;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -71,7 +70,6 @@ class Client
 
     /**
      * @param  PushQuery|PushQuery[]  $query
-     * @return void
      */
     public function stream(array|PushQuery $query): void
     {
@@ -124,6 +122,7 @@ class Client
 
             if ($chunk->isTimeout()) {
                 $responseStream = $this->client->stream($pendingResponses);
+
                 continue;
             }
 
