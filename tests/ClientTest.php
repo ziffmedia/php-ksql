@@ -221,30 +221,48 @@ test('it should handle idle timeouts correctly', function () {
     $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data, &$responseCount) {
         $responseCount++;
         $expected = current($data);
+        if ($expected === '') {
+            next($data);
+            $expected = current($data); // skip testing the timeout, which we will never receive
+        }
         expect($row['foo'])->toBe($expected['foo']);
         next($data);
     });
     $c->stream($pq);
-    expect($responseCount)->toBe(count($data));
-});
-
-test('it might handle timeouts', function() {
-    $body = function() {
-        yield "foo";
-        yield "";
-        yield "bar";
-    };
-    $response = new \Symfony\Component\HttpClient\Response\MockResponse($body(), ['http_code' => 200]);
-    $client = new MockHttpClient([$response]);
-    $request = $client->request('GET', 'http://localhost/foo');
-    $responseStream = $client->stream($request);
-    $responseCount = 0;
-    foreach ($responseStream as $response => $chunk) {
-        if ($chunk->isTimeout()) {
-            // now what
-        } else if (!$chunk->isFirst()) {
-            $responseCount++;
-        }
-    }
     expect($responseCount)->toBe(2);
 });
+
+test('it should handle multiplexed idle timeouts correctly', function () {
+    $data1 = [['foo' => 'bar'], '', ['foo' => 'baz']];
+    $data2 = [['foo' => 'bar'], ['foo' => 'baz'], ''];
+    $data3 = [['foo' => 'bar'], ['foo' => 'baz']];
+
+    $r1 = mockPushQueryResponse($data1);
+    $r2 = mockPushQueryResponse($data2);
+    $r3 = mockPushQueryResponse($data3);
+
+    $m = new MockHttpClient([$r1, $r2, $r3]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+
+    $responseCount = 0;
+
+    $handler = function (PushQueryRow $row) use (&$data1, &$data2, &$data3, &$responseCount) {
+        $varName = $row->query->name;
+        $responseCount++;
+        $expected = current($$varName);
+        if ($expected === '') {
+            next($$varName);
+            $expected = current($$varName); // skip testing the timeout, which we will never receive
+        }
+        expect($row['foo'])->toBe($expected['foo']);
+        next($$varName);
+    };
+
+    $pq1 = new PushQuery('data1', 'SELECT * FROM foo EMIT CHANGES', $handler);
+    $pq2 = new PushQuery('data2', 'SELECT * FROM bar EMIT CHANGES', $handler);
+    $pq3 = new PushQuery('data3', 'SELECT * FROM baz EMIT CHANGES', $handler);
+
+    $c->stream([$pq1, $pq2, $pq3]);
+    expect($responseCount)->toBe(6);
+});
+
