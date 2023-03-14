@@ -3,7 +3,7 @@
 namespace ZiffMedia\Ksql;
 
 use InvalidArgumentException;
-use Symfony\Component\HttpClient\AmpHttpClient;
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Client
@@ -15,7 +15,7 @@ class Client
         protected HttpClientInterface|null $client = null
     ) {
         if (! $client) {
-            $this->client = new AmpHttpClient();
+            $this->client = HttpClient::create();
         }
 
         $this->client = $this->client->withOptions([
@@ -70,7 +70,6 @@ class Client
 
     /**
      * @param  PushQuery|PushQuery[]  $query
-     * @return void
      */
     public function stream(array|PushQuery $query): void
     {
@@ -93,7 +92,7 @@ class Client
             }
         }
 
-        $responses = [];
+        $pendingResponses = [];
         foreach ($queries as $query) {
             $requestBody = [
                 'sql' => $query->query,
@@ -102,7 +101,7 @@ class Client
                 ],
             ];
 
-            $responses[] = $this->client->request('POST', '/query-stream', [
+            $pendingResponses[] = $this->client->request('POST', '/query-stream', [
                 'body' => json_encode($requestBody),
                 'headers' => [
                     'Accept' => 'application/vnd.ksqlapi.delimited.v1',
@@ -114,12 +113,19 @@ class Client
         }
 
         $schemas = [];
-        foreach ($this->client->stream($responses) as $response => $chunk) {
+        $responseStream = $this->client->stream($pendingResponses);
+        while ($responseStream->valid()) {
+            $chunk = $responseStream->current();
+            $response = $responseStream->key();
             $userData = $response->getInfo('user_data');
             $queryName = $userData['query_name'];
-//            if ($chunk->isTimeout()) {
-//                continue;
-//            }
+
+            if ($chunk->isTimeout()) {
+                $responseStream = $this->client->stream($pendingResponses);
+
+                continue;
+            }
+
             $content = $chunk->getContent();
             if (strlen($content)) {
                 $content = json_decode($content, true);
@@ -142,6 +148,7 @@ class Client
                     }
                 }
             }
+            $responseStream->next();
         }
     }
 }

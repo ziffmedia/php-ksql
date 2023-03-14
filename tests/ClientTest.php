@@ -7,7 +7,7 @@ use ZiffMedia\Ksql\PullQueryResult;
 use ZiffMedia\Ksql\PushQuery;
 use ZiffMedia\Ksql\PushQueryRow;
 
-test('it_uses_the_streaming_api', function () {
+test('it uses the streaming api', function () {
     $r = mockPullQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
@@ -30,7 +30,7 @@ test('it_uses_the_streaming_api', function () {
     expect($r->getRequestUrl())->toBe('http://localhost/query-stream');
 });
 
-test('it_creates_auth_headers', function () {
+test('it creates auth headers', function () {
     $r = mockPullQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
@@ -43,7 +43,7 @@ test('it_creates_auth_headers', function () {
     expect($r->getRequestOptions()['headers'])->toContain($expectedHeader);
 });
 
-test('it_does_not_create_auth_headers', function () {
+test('it does not create auth headers', function () {
     $r = mockPullQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -56,7 +56,7 @@ test('it_does_not_create_auth_headers', function () {
     expect($r->getRequestOptions()['headers'])->not()->toContain($expectedHeader);
 });
 
-test('it_runs_simple_pull_queries', function () {
+test('it runs simple pull queries', function () {
     $r = mockPullQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -70,7 +70,7 @@ test('it_runs_simple_pull_queries', function () {
     expect($result->queryId)->toBe('testquery123');
 });
 
-test('it_sends_proper_pull_query_content_type_header', function () {
+test('it sends proper pull query content type header', function () {
     $r = mockPullQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
@@ -83,14 +83,14 @@ test('it_sends_proper_pull_query_content_type_header', function () {
     expect($r->getRequestOptions()['headers'])->toContain($expectedHeader);
 });
 
-test('it_throws_when_using_push_queries_on_query_method', function () {
+test('it throws when using push queries on query method', function () {
     $r = mockPullQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     expect(fn () => $c->query('SELECT * FROM foo EMIT CHANGES'))->toThrow(InvalidArgumentException::class);
 });
 
-test('it_throws_when_using_pull_queries_on_stream_method', function () {
+test('it throws when using pull queries on stream method', function () {
     $r = mockPullQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -98,7 +98,7 @@ test('it_throws_when_using_pull_queries_on_stream_method', function () {
     expect(fn () => $c->stream($pq))->toThrow(InvalidArgumentException::class);
 });
 
-test('it_properly_delimits_pull_queries', function () {
+test('it properly delimits pull queries', function () {
     $r = mockPullQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -106,7 +106,7 @@ test('it_properly_delimits_pull_queries', function () {
     expect($result->query)->toBe('SELECT * FROM foo;');
 });
 
-test('it_sends_proper_push_query_content_type_header', function () {
+test('it sends proper push query content type header', function () {
     $r = mockPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
@@ -120,7 +120,7 @@ test('it_sends_proper_push_query_content_type_header', function () {
     expect($r->getRequestOptions()['headers'])->toContain($expectedHeader);
 });
 
-test('it_properly_delimits_push_queries', function () {
+test('it properly delimits push queries', function () {
     $r = mockPushQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -130,7 +130,7 @@ test('it_properly_delimits_push_queries', function () {
     $c->stream($pq);
 });
 
-test('it_runs_simple_push_queries', function () {
+test('it runs simple push queries', function () {
     $data = [['foo' => 'bar'], ['foo' => 'baz']];
     $r = mockPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
@@ -143,7 +143,7 @@ test('it_runs_simple_push_queries', function () {
     $c->stream($pq);
 });
 
-test('it_runs_multiplexed_stream_queries_with_matched_handlers', function () {
+test('it runs multiplexed stream queries with matched handlers', function () {
     $data1 = [['foo' => 'bar'], ['foo' => 'baz']];
     $data2 = [['bar' => 'baz'], ['bar' => 'foo']];
 
@@ -176,7 +176,7 @@ test('it_runs_multiplexed_stream_queries_with_matched_handlers', function () {
     );
 });
 
-test('it_runs_multiplexed_stream_queries_with_a_single_handler', function () {
+test('it runs multiplexed stream queries with a single handler', function () {
     $data1 = [['foo' => 'bar'], ['foo' => 'baz']];
     $data2 = [['bar' => 'baz'], ['bar' => 'foo']];
 
@@ -198,7 +198,7 @@ test('it_runs_multiplexed_stream_queries_with_a_single_handler', function () {
     $c->stream([$pq1, $pq2]);
 });
 
-test('it_obeys_offsets_on_push_queries', function () {
+test('it obeys offsets on push queries', function () {
     $r = mockPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
@@ -212,28 +212,56 @@ test('it_obeys_offsets_on_push_queries', function () {
     expect($r->getRequestOptions()['body'])->toContain('latest');
 });
 
-test('it_should_continue_after_idle_timeouts', function () {
+test('it should handle idle timeouts correctly', function () {
     $data = [['foo' => 'bar'], '', ['foo' => 'baz']];
     $r = mockPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
-    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
+    $responseCount = 0;
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data, &$responseCount) {
+        $responseCount++;
         $expected = current($data);
+        if ($expected === '') {
+            next($data);
+            $expected = current($data); // skip testing the timeout, which we will never receive
+        }
         expect($row['foo'])->toBe($expected['foo']);
         next($data);
     });
     $c->stream($pq);
-})->skip();
+    expect($responseCount)->toBe(2);
+});
 
-test('it_should_not_timeout_before', function () {
-    $data = [['foo' => 'bar'], '', ['foo' => 'baz']];
-    $r = mockPushQueryResponse($data);
-    $m = new MockHttpClient([$r]);
+test('it should handle multiplexed idle timeouts correctly', function () {
+    $data1 = [['foo' => 'bar'], '', ['foo' => 'baz']];
+    $data2 = [['foo' => 'bar'], ['foo' => 'baz'], ''];
+    $data3 = [['foo' => 'bar'], ['foo' => 'baz']];
+
+    $r1 = mockPushQueryResponse($data1);
+    $r2 = mockPushQueryResponse($data2);
+    $r3 = mockPushQueryResponse($data3);
+
+    $m = new MockHttpClient([$r1, $r2, $r3]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
-    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
-        $expected = current($data);
+
+    $responseCount = 0;
+
+    $handler = function (PushQueryRow $row) use (&$data1, &$data2, &$data3, &$responseCount) {
+        $varName = $row->query->name;
+        $responseCount++;
+        $expected = current($$varName);
+        if ($expected === '') {
+            next($$varName);
+            $expected = current($$varName); // skip testing the timeout, which we will never receive
+        }
         expect($row['foo'])->toBe($expected['foo']);
-        next($data);
-    });
-    $c->stream($pq);
-})->skip();
+        next($$varName);
+    };
+
+    $pq1 = new PushQuery('data1', 'SELECT * FROM foo EMIT CHANGES', $handler);
+    $pq2 = new PushQuery('data2', 'SELECT * FROM bar EMIT CHANGES', $handler);
+    $pq3 = new PushQuery('data3', 'SELECT * FROM baz EMIT CHANGES', $handler);
+
+    $c->stream([$pq1, $pq2, $pq3]);
+    expect($responseCount)->toBe(6);
+});
