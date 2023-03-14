@@ -1,4 +1,4 @@
-name: Standards Checks
+name: Run Tests
 
 on:
   push:
