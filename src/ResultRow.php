@@ -14,7 +14,6 @@ class ResultRow implements ArrayAccess, IteratorAggregate, Countable
         public Query $query,
         public array $data,
     ) {
-
     }
 
     public function getIterator(): Traversable
