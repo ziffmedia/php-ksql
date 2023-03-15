@@ -54,7 +54,7 @@ class Client
                 'Accept' => 'application/json',
             ],
             'body' => json_encode([
-                'sql' => $query,
+                'sql' => $query->query,
             ]),
         ]);
 
