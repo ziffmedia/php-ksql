@@ -32,14 +32,21 @@ class Client
         }
     }
 
-    public function query(string $query): PullQueryResult
+    /**
+     * @return array|ResultRow[]
+     */
+    public function query(string|PushQuery $query): array
     {
-        if (stripos($query, 'emit changes') !== false) {
+        if (is_string($query)) {
+            $query = new PullQuery($query);
+        }
+
+        if (stripos($query->query, 'emit changes') !== false) {
             throw new InvalidArgumentException('Queries sent to the query() should only be pull queries. Use stream() instead.');
         }
 
-        if (! str_ends_with($query, ';')) {
-            $query .= ';';
+        if (! str_ends_with($query->query, ';')) {
+            $query->query .= ';';
         }
 
         $response = $this->client->request('POST', '/query-stream', [
@@ -53,19 +60,16 @@ class Client
 
         $rows = $response->toArray();
         $header = array_shift($rows);
-        $schema = array_combine($header['columnNames'], $header['columnTypes']);
-        $schema = array_map(fn ($val) => strtolower($val), $schema);
+        $query->queryId = $header['queryId'];
 
-        $rows = array_map(function ($row) use ($schema) {
-            return array_combine(array_keys($schema), $row);
+        $schema = array_combine($header['columnNames'], $header['columnTypes']);
+        $query->schema = $schema;
+
+        $rows = array_map(function ($row) use ($schema, $query) {
+            return new ResultRow($query, array_combine(array_keys($schema), $row));
         }, $rows);
 
-        return new PullQueryResult(
-            $query,
-            $header['queryId'],
-            $schema,
-            $rows
-        );
+        return $rows;
     }
 
     /**
@@ -112,13 +116,13 @@ class Client
             ]);
         }
 
-        $schemas = [];
         $responseStream = $this->client->stream($pendingResponses);
         while ($responseStream->valid()) {
             $chunk = $responseStream->current();
             $response = $responseStream->key();
             $userData = $response->getInfo('user_data');
             $queryName = $userData['query_name'];
+            $query = $queries[$queryName];
 
             if ($chunk->isTimeout()) {
                 $responseStream = $this->client->stream($pendingResponses);
@@ -131,19 +135,16 @@ class Client
                 $content = json_decode($content, true);
                 if (is_array($content)) {
                     if (isset($content['queryId'])) {
-                        $queries[$queryName]->queryId = $content['queryId'];
+                        $query->queryId = $content['queryId'];
                         $schema = array_combine($content['columnNames'], $content['columnTypes']);
-                        $schema = array_map(fn ($val) => strtolower($val), $schema);
-                        $schemas[$queryName] = $schema;
+                        $query->schema = $schema;
                     } else {
-                        $row = new PushQueryRow(
-                            $queries[$queryName],
-                            $schemas[$queryName],
-                            array_combine(array_keys($schemas[$queryName]), $content)
+                        $row = new ResultRow(
+                            $query,
+                            array_combine(array_keys($query->schema), $content)
                         );
-                        if (is_callable($queries[$queryName]->handler)) {
-                            $handler = $queries[$queryName]->handler;
-                            $handler($row);
+                        if (is_callable($query->handler)) {
+                            ($query->handler)($row);
                         }
                     }
                 }

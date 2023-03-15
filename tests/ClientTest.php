@@ -3,9 +3,8 @@
 use Symfony\Component\HttpClient\MockHttpClient;
 use ZiffMedia\Ksql\Client;
 use ZiffMedia\Ksql\Offset;
-use ZiffMedia\Ksql\PullQueryResult;
 use ZiffMedia\Ksql\PushQuery;
-use ZiffMedia\Ksql\PushQueryRow;
+use ZiffMedia\Ksql\ResultRow;
 
 test('it uses the streaming api', function () {
     $r = mockPullQueryResponse([['foo' => 'bar']]);
@@ -61,13 +60,13 @@ test('it runs simple pull queries', function () {
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     $result = $c->query('SELECT * FROM test;');
-    expect(count($result))->toBe(2);
-    expect($result)->toBeInstanceOf(PullQueryResult::class);
-    expect($result[0])->toBeArray();
-    expect($result[0]['foo'])->toBe('bar');
-    expect($result[1]['foo'])->toBe('baz');
-    expect($result->schema['foo'])->toBeString();
-    expect($result->queryId)->toBe('testquery123');
+    expect(count($result))->toBe(2)
+        ->and($result)->toBeArray()
+        ->and($result[0])->toBeInstanceOf(ResultRow::class)
+        ->and($result[0]['foo'])->toBe('bar')
+        ->and($result[1]['foo'])->toBe('baz')
+        ->and($result[0]->query->schema['foo'])->toBeString()
+        ->and($result[0]->query->queryId)->toBe('testquery123');
 });
 
 test('it sends proper pull query content type header', function () {
@@ -103,7 +102,7 @@ test('it properly delimits pull queries', function () {
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     $result = $c->query('SELECT * FROM foo');
-    expect($result->query)->toBe('SELECT * FROM foo;');
+    expect($result[0]->query->query)->toBe('SELECT * FROM foo;');
 });
 
 test('it sends proper push query content type header', function () {
@@ -124,7 +123,7 @@ test('it properly delimits push queries', function () {
     $r = mockPushQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
-    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function (PushQueryRow $r) {
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function (ResultRow $r) {
         expect($r->query->query)->toBe('SELECT * FROM foo EMIT CHANGES;');
     });
     $c->stream($pq);
@@ -186,7 +185,7 @@ test('it runs multiplexed stream queries with a single handler', function () {
     $m = new MockHttpClient([$r1, $r2]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
 
-    $handler = function (PushQueryRow $row) use (&$data1, &$data2) {
+    $handler = function (ResultRow $row) use (&$data1, &$data2) {
         $expected = current(${$row->query->name});
         expect($row[key($expected)])->toBe($expected[key($expected)]);
         next(${$row->query->name});
@@ -246,7 +245,7 @@ test('it should handle multiplexed idle timeouts correctly', function () {
 
     $responseCount = 0;
 
-    $handler = function (PushQueryRow $row) use (&$data1, &$data2, &$data3, &$responseCount) {
+    $handler = function (ResultRow $row) use (&$data1, &$data2, &$data3, &$responseCount) {
         $varName = $row->query->name;
         $responseCount++;
         $expected = current($$varName);

@@ -8,15 +8,13 @@ use Countable;
 use IteratorAggregate;
 use Traversable;
 
-class PushQueryRow implements ArrayAccess, IteratorAggregate, Countable
+class ResultRow implements ArrayAccess, IteratorAggregate, Countable
 {
     public function __construct(
-        public PushQuery $query,
-        public array $schema,
+        public Query $query,
         public array $data,
     ) {
-        $this->schema = array_change_key_case($this->schema);
-        $this->data = array_change_key_case($this->data);
+
     }
 
     public function getIterator(): Traversable

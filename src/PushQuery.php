@@ -2,10 +2,8 @@
 
 namespace ZiffMedia\Ksql;
 
-class PushQuery
+class PushQuery extends Query
 {
-    public string $queryId;
-
     /**
      * @param  callable  $handler
      */
