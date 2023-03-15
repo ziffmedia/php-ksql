@@ -35,7 +35,7 @@ class Client
     /**
      * @return array|ResultRow[]
      */
-    public function query(string|PushQuery $query): array
+    public function query(string|PullQuery $query): array
     {
         if (is_string($query)) {
             $query = new PullQuery($query);
