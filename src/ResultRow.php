@@ -28,7 +28,7 @@ class ResultRow implements ArrayAccess, IteratorAggregate, Countable
 
     public function offsetExists(mixed $offset): bool
     {
-        return isset($this->data);
+        return isset($this->data[$offset]);
     }
 
     public function offsetGet(mixed $offset): mixed
