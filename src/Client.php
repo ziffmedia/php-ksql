@@ -104,8 +104,6 @@ class Client
             }
         }
 
-
-
         do {
             $hasThrown = false;
             $pendingResponses = [];
@@ -165,7 +163,7 @@ class Client
                     }
                     $responseStream->next();
                 } catch (TransportException $e) {
-                    if (!$this->retryOnNetworkErrors) {
+                    if (! $this->retryOnNetworkErrors) {
                         throw $e;
                     } else {
                         $hasThrown = true;
