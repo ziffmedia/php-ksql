@@ -5,6 +5,7 @@ use ZiffMedia\Ksql\Client;
 use ZiffMedia\Ksql\Offset;
 use ZiffMedia\Ksql\PushQuery;
 use ZiffMedia\Ksql\ResultRow;
+use Symfony\Component\HttpClient\Exception\TransportException;
 
 test('it uses the streaming api', function () {
     $r = mockPullQueryResponse([['foo' => 'bar']]);
@@ -263,4 +264,36 @@ test('it should handle multiplexed idle timeouts correctly', function () {
 
     $c->stream([$pq1, $pq2, $pq3]);
     expect($responseCount)->toBe(6);
+});
+
+test('it should handle transport exceptions correctly', function() {
+    $data1 = [['foo' => 'bar'], new RuntimeException('connection closed')];
+    $data2 = [['foo' => 'baz']];
+    $expectedData = array_merge($data1, $data2);
+    $r1 = mockPushQueryResponse($data1);
+    $r2 = mockPushQueryResponse($data2);
+    $m = new MockHttpClient([$r1, $r2]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+    $responseCount = 0;
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$expectedData, &$responseCount) {
+        $responseCount++;
+        $expected = current($expectedData);
+        if ($expected instanceof Exception) {
+            next($expectedData);
+            $expected = current($expectedData); // skip testing the timeout, which we will never receive
+        }
+        expect($row['foo'])->toBe($expected['foo']);
+        next($expectedData);
+    });
+    $c->stream($pq);
+    expect($responseCount)->toBe(2);
+});
+
+test('it should fail on unhandled transport exceptions when retry is false', function() {
+    $data = [['foo' => 'bar'], new RuntimeException('connection closed')];
+    $r = mockPushQueryResponse($data);
+    $m = new MockHttpClient([$r]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn() => null);
+    expect(fn() => $c->stream($pq))->toThrow(TransportException::class);
 });

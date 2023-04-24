@@ -3,11 +3,14 @@
 namespace ZiffMedia\Ksql;
 
 use InvalidArgumentException;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Client
 {
+    protected bool $retryOnNetworkErrors = true;
+
     public function __construct(
         protected string $endpoint,
         protected string|null $username = null,
@@ -30,6 +33,11 @@ class Client
                 'headers' => $headers,
             ]);
         }
+    }
+
+    public function retryOnNetworkErrors(bool $retry = true): void
+    {
+        $this->retryOnNetworkErrors = $retry;
     }
 
     /**
@@ -96,60 +104,75 @@ class Client
             }
         }
 
-        $pendingResponses = [];
-        foreach ($queries as $query) {
-            $requestBody = [
-                'sql' => $query->query,
-                'properties' => [
-                    'auto.offset.reset' => strtolower($query->offset->name),
-                ],
-            ];
 
-            $pendingResponses[] = $this->client->request('POST', '/query-stream', [
-                'body' => json_encode($requestBody),
-                'headers' => [
-                    'Accept' => 'application/vnd.ksqlapi.delimited.v1',
-                ],
-                'user_data' => [
-                    'query_name' => $query->name,
-                ],
-            ]);
-        }
 
-        $responseStream = $this->client->stream($pendingResponses);
-        while ($responseStream->valid()) {
-            $chunk = $responseStream->current();
-            $response = $responseStream->key();
-            $userData = $response->getInfo('user_data');
-            $queryName = $userData['query_name'];
-            $query = $queries[$queryName];
+        do {
+            $hasThrown = false;
+            $pendingResponses = [];
+            foreach ($queries as $query) {
+                $requestBody = [
+                    'sql' => $query->query,
+                    'properties' => [
+                        'auto.offset.reset' => strtolower($query->offset->name),
+                    ],
+                ];
 
-            if ($chunk->isTimeout()) {
-                $responseStream = $this->client->stream($pendingResponses);
-
-                continue;
+                $pendingResponses[] = $this->client->request('POST', '/query-stream', [
+                    'body' => json_encode($requestBody),
+                    'headers' => [
+                        'Accept' => 'application/vnd.ksqlapi.delimited.v1',
+                    ],
+                    'user_data' => [
+                        'query_name' => $query->name,
+                    ],
+                ]);
             }
 
-            $content = $chunk->getContent();
-            if (strlen($content)) {
-                $content = json_decode($content, true);
-                if (is_array($content)) {
-                    if (isset($content['queryId'])) {
-                        $query->queryId = $content['queryId'];
-                        $schema = array_combine($content['columnNames'], $content['columnTypes']);
-                        $query->schema = $schema;
-                    } else {
-                        $row = new ResultRow(
-                            $query,
-                            array_combine(array_keys($query->schema), $content)
-                        );
-                        if (is_callable($query->handler)) {
-                            ($query->handler)($row);
+            $responseStream = $this->client->stream($pendingResponses);
+
+            while ($responseStream->valid()) {
+                $chunk = $responseStream->current();
+                $response = $responseStream->key();
+                $userData = $response->getInfo('user_data');
+                $queryName = $userData['query_name'];
+                $query = $queries[$queryName];
+
+                try {
+                    if ($chunk->isTimeout()) {
+                        $responseStream = $this->client->stream($pendingResponses);
+
+                        continue;
+                    }
+
+                    $content = $chunk->getContent();
+                    if (strlen($content)) {
+                        $content = json_decode($content, true);
+                        if (is_array($content)) {
+                            if (isset($content['queryId'])) {
+                                $query->queryId = $content['queryId'];
+                                $schema = array_combine($content['columnNames'], $content['columnTypes']);
+                                $query->schema = $schema;
+                            } else {
+                                $row = new ResultRow(
+                                    $query,
+                                    array_combine(array_keys($query->schema), $content)
+                                );
+                                if (is_callable($query->handler)) {
+                                    ($query->handler)($row);
+                                }
+                            }
                         }
+                    }
+                    $responseStream->next();
+                } catch (TransportException $e) {
+                    if (!$this->retryOnNetworkErrors) {
+                        throw $e;
+                    } else {
+                        $hasThrown = true;
+                        break;
                     }
                 }
             }
-            $responseStream->next();
-        }
+        } while ($this->retryOnNetworkErrors && $hasThrown);
     }
 }
