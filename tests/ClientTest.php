@@ -6,6 +6,8 @@ use ZiffMedia\Ksql\Client;
 use ZiffMedia\Ksql\Offset;
 use ZiffMedia\Ksql\PushQuery;
 use ZiffMedia\Ksql\ResultRow;
+use ZiffMedia\Ksql\ContentType;
+use ZiffMedia\Ksql\TombstoneRow;
 
 test('it uses the streaming api', function () {
     $r = mockPullQueryResponse([['foo' => 'bar']]);
@@ -18,7 +20,7 @@ test('it uses the streaming api', function () {
     }
     expect($r->getRequestUrl())->toBe('http://localhost/query-stream');
 
-    $r = mockPushQueryResponse([['foo' => 'bar']]);
+    $r = mockDelimittedPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
     $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn () => null);
@@ -107,7 +109,7 @@ test('it properly delimits pull queries', function () {
 });
 
 test('it sends proper push query content type header', function () {
-    $r = mockPushQueryResponse([['foo' => 'bar']]);
+    $r = mockDelimittedPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
     $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn () => null);
@@ -121,7 +123,7 @@ test('it sends proper push query content type header', function () {
 });
 
 test('it properly delimits push queries', function () {
-    $r = mockPushQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
+    $r = mockDelimittedPushQueryResponse([['foo' => 'bar'], ['foo' => 'baz']]);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function (ResultRow $r) {
@@ -132,7 +134,7 @@ test('it properly delimits push queries', function () {
 
 test('it runs simple push queries', function () {
     $data = [['foo' => 'bar'], ['foo' => 'baz']];
-    $r = mockPushQueryResponse($data);
+    $r = mockDelimittedPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
@@ -147,8 +149,8 @@ test('it runs multiplexed stream queries with matched handlers', function () {
     $data1 = [['foo' => 'bar'], ['foo' => 'baz']];
     $data2 = [['bar' => 'baz'], ['bar' => 'foo']];
 
-    $r1 = mockPushQueryResponse($data1);
-    $r2 = mockPushQueryResponse($data2);
+    $r1 = mockDelimittedPushQueryResponse($data1);
+    $r2 = mockDelimittedPushQueryResponse($data2);
 
     $m = new MockHttpClient([$r1, $r2]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -180,8 +182,8 @@ test('it runs multiplexed stream queries with a single handler', function () {
     $data1 = [['foo' => 'bar'], ['foo' => 'baz']];
     $data2 = [['bar' => 'baz'], ['bar' => 'foo']];
 
-    $r1 = mockPushQueryResponse($data1);
-    $r2 = mockPushQueryResponse($data2);
+    $r1 = mockDelimittedPushQueryResponse($data1);
+    $r2 = mockDelimittedPushQueryResponse($data2);
 
     $m = new MockHttpClient([$r1, $r2]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -199,7 +201,7 @@ test('it runs multiplexed stream queries with a single handler', function () {
 });
 
 test('it obeys offsets on push queries', function () {
-    $r = mockPushQueryResponse([['foo' => 'bar']]);
+    $r = mockDelimittedPushQueryResponse([['foo' => 'bar']]);
     $m = new MockHttpClient([$r]);
     $c = new Client('http://localhost', 'user', 'pass', $m);
     $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn () => null, Offset::LATEST);
@@ -214,7 +216,7 @@ test('it obeys offsets on push queries', function () {
 
 test('it should handle idle timeouts correctly', function () {
     $data = [['foo' => 'bar'], '', ['foo' => 'baz']];
-    $r = mockPushQueryResponse($data);
+    $r = mockDelimittedPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     $responseCount = 0;
@@ -237,9 +239,9 @@ test('it should handle multiplexed idle timeouts correctly', function () {
     $data2 = [['foo' => 'bar'], ['foo' => 'baz'], ''];
     $data3 = [['foo' => 'bar'], ['foo' => 'baz']];
 
-    $r1 = mockPushQueryResponse($data1);
-    $r2 = mockPushQueryResponse($data2);
-    $r3 = mockPushQueryResponse($data3);
+    $r1 = mockDelimittedPushQueryResponse($data1);
+    $r2 = mockDelimittedPushQueryResponse($data2);
+    $r3 = mockDelimittedPushQueryResponse($data3);
 
     $m = new MockHttpClient([$r1, $r2, $r3]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
@@ -270,8 +272,8 @@ test('it should handle transport exceptions correctly', function () {
     $data1 = [['foo' => 'bar'], new RuntimeException('connection closed')];
     $data2 = [['foo' => 'baz']];
     $expectedData = array_merge($data1, $data2);
-    $r1 = mockPushQueryResponse($data1);
-    $r2 = mockPushQueryResponse($data2);
+    $r1 = mockDelimittedPushQueryResponse($data1);
+    $r2 = mockDelimittedPushQueryResponse($data2);
     $m = new MockHttpClient([$r1, $r2]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     $responseCount = 0;
@@ -291,9 +293,62 @@ test('it should handle transport exceptions correctly', function () {
 
 test('it should fail on unhandled transport exceptions when retry is false', function () {
     $data = [['foo' => 'bar'], new RuntimeException('connection closed')];
-    $r = mockPushQueryResponse($data);
+    $r = mockDelimittedPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
     $c = new Client(endpoint: 'http://localhost', client: $m);
     $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', fn () => null);
     expect(fn () => $c->stream($pq))->toThrow(TransportException::class);
+});
+
+test('it should emit tombstone objects for tombstone rows', function() {
+    $data = [['tombstone' => ['key' => '123', 'foo' => null]]];
+    $r = mockV1JsonPushQueryResponse($data);
+    $m = new MockHttpClient([$r]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+    $c->setAcceptContentType(ContentType::V1_JSON);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
+        expect($row)->toBeInstanceOf(TombstoneRow::class);
+        expect($row->key)->toBe('123');
+    });
+    $c->stream($pq);
+});
+
+test('it should handle all content type options', function() {
+    $data = [['foo' => 'bar'], ['foo' => 'baz']];
+
+    $r = mockDelimittedPushQueryResponse($data);
+    $m = new MockHttpClient([$r]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+    $c->setAcceptContentType(ContentType::V1_DELIMITTED);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
+        $expected = current($data);
+        expect($row['foo'])->toBe($expected['foo']);
+        next($data);
+    });
+    $c->stream($pq);
+    reset($data);
+
+    $r = mockV1JsonPushQueryResponse($data);
+    $m = new MockHttpClient([$r]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+    $c->setAcceptContentType(ContentType::V1_JSON);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
+        $expected = current($data);
+        expect($row['foo'])->toBe($expected['foo']);
+        next($data);
+    });
+    $c->stream($pq);
+    reset($data);
+
+    $r = mockApplicationJsonPushQueryResponse($data);
+    $m = new MockHttpClient([$r]);
+    $c = new Client(endpoint: 'http://localhost', client: $m);
+    $c->setAcceptContentType(ContentType::APPLICATION_JSON);
+    $pq = new PushQuery('test', 'SELECT * FROM foo EMIT CHANGES', function ($row) use (&$data) {
+        $expected = current($data);
+        expect($row['foo'])->toBe($expected['foo']);
+        next($data);
+    });
+    $c->stream($pq);
+    reset($data);
 });

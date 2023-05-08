@@ -6,10 +6,15 @@ use InvalidArgumentException;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use ZiffMedia\Ksql\Parser\ApplicationJsonParser;
+use ZiffMedia\Ksql\Parser\DelimittedParser;
+use ZiffMedia\Ksql\Parser\ParserInterface;
+use ZiffMedia\Ksql\Parser\V1JsonParser;
 
 class Client
 {
     protected bool $retryOnNetworkErrors = true;
+    protected ContentType $acceptContenType = ContentType::V1_DELIMITTED;
 
     public function __construct(
         protected string $endpoint,
@@ -40,6 +45,11 @@ class Client
         $this->retryOnNetworkErrors = $retry;
     }
 
+    public function setAcceptContentType(ContentType $contentType)
+    {
+        $this->acceptContenType = $contentType;
+    }
+
     /**
      * @return array|ResultRow[]
      */
@@ -59,7 +69,7 @@ class Client
 
         $response = $this->client->request('POST', '/query-stream', [
             'headers' => [
-                'Accept' => 'application/json',
+                'Accept' => ContentType::APPLICATION_JSON->value,
             ],
             'body' => json_encode([
                 'sql' => $query->query,
@@ -118,7 +128,7 @@ class Client
                 $pendingResponses[] = $this->client->request('POST', '/query-stream', [
                     'body' => json_encode($requestBody),
                     'headers' => [
-                        'Accept' => 'application/vnd.ksqlapi.delimited.v1',
+                        'Accept' => $this->acceptContenType->value,
                     ],
                     'user_data' => [
                         'query_name' => $query->name,
@@ -144,17 +154,28 @@ class Client
 
                     $content = $chunk->getContent();
                     if (strlen($content)) {
-                        $content = json_decode($content, true);
+                        $content = $this->parseContent($content);
                         if (is_array($content)) {
                             if (isset($content['queryId'])) {
                                 $query->queryId = $content['queryId'];
                                 $schema = array_combine($content['columnNames'], $content['columnTypes']);
                                 $query->schema = $schema;
                             } else {
-                                $row = new ResultRow(
-                                    $query,
-                                    array_combine(array_keys($query->schema), $content)
-                                );
+                                if (isset($content['tombstone'])) {
+                                    $row = new TombstoneRow(
+                                        $query,
+                                        array_combine(array_keys($query->schema), $content['tombstone'])
+                                    );
+                                    $keySearch = array_filter($content['tombstone']);
+                                    $key = empty($keySearch) ? null : $keySearch[0];
+                                    $row->key = $key;
+                                } else {
+                                    $row = new ResultRow(
+                                        $query,
+                                        array_combine(array_keys($query->schema), $content)
+                                    );
+                                }
+
                                 if (is_callable($query->handler)) {
                                     ($query->handler)($row);
                                 }
@@ -172,5 +193,16 @@ class Client
                 }
             }
         } while ($this->retryOnNetworkErrors && $hasThrown);
+    }
+
+    private function parseContent(string $content)
+    {
+        /** @var ParserInterface $parser */
+        $parser = match($this->acceptContenType) {
+            ContentType::APPLICATION_JSON => ApplicationJsonParser::class,
+            ContentType::V1_DELIMITTED => DelimittedParser::class,
+            ContentType::V1_JSON => V1JsonParser::class
+        };
+        return $parser::parse($content);
     }
 }
