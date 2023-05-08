@@ -14,6 +14,7 @@ use ZiffMedia\Ksql\Parser\V1JsonParser;
 class Client
 {
     protected bool $retryOnNetworkErrors = true;
+
     protected ContentType $acceptContenType = ContentType::V1_DELIMITTED;
 
     public function __construct(
@@ -198,11 +199,12 @@ class Client
     private function parseContent(string $content)
     {
         /** @var ParserInterface $parser */
-        $parser = match($this->acceptContenType) {
+        $parser = match ($this->acceptContenType) {
             ContentType::APPLICATION_JSON => ApplicationJsonParser::class,
             ContentType::V1_DELIMITTED => DelimittedParser::class,
             ContentType::V1_JSON => V1JsonParser::class
         };
+
         return $parser::parse($content);
     }
 }

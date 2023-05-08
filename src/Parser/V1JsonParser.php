@@ -1,4 +1,5 @@
 <?php
+
 namespace ZiffMedia\Ksql\Parser;
 
 class V1JsonParser implements ParserInterface
@@ -6,7 +7,7 @@ class V1JsonParser implements ParserInterface
     public static function parse(string $data): array
     {
         $data = trim($data);
-        if (str_starts_with($data, "[{")) {
+        if (str_starts_with($data, '[{')) {
             $data = substr($data, 1, -1);
             $data = json_decode($data, true);
 
@@ -19,10 +20,11 @@ class V1JsonParser implements ParserInterface
                 $columnTypes[] = trim($parts[2]);
             }
             $transformed = [
-                "queryId" => $data['header']['queryId'],
-                "columnNames" => $columnNames,
-                "columnTypes" => $columnTypes
+                'queryId' => $data['header']['queryId'],
+                'columnNames' => $columnNames,
+                'columnTypes' => $columnTypes,
             ];
+
             return $transformed;
         } else {
             $data = substr($data, 0, -1);
@@ -30,8 +32,8 @@ class V1JsonParser implements ParserInterface
             if (isset($row['row']['tombstone'])) {
                 return ['tombstone' => $row['row']['columns']];
             }
+
             return $row['row']['columns'];
         }
     }
-
 }

@@ -3,10 +3,10 @@
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use ZiffMedia\Ksql\Client;
+use ZiffMedia\Ksql\ContentType;
 use ZiffMedia\Ksql\Offset;
 use ZiffMedia\Ksql\PushQuery;
 use ZiffMedia\Ksql\ResultRow;
-use ZiffMedia\Ksql\ContentType;
 use ZiffMedia\Ksql\TombstoneRow;
 
 test('it uses the streaming api', function () {
@@ -300,7 +300,7 @@ test('it should fail on unhandled transport exceptions when retry is false', fun
     expect(fn () => $c->stream($pq))->toThrow(TransportException::class);
 });
 
-test('it should emit tombstone objects for tombstone rows', function() {
+test('it should emit tombstone objects for tombstone rows', function () {
     $data = [['tombstone' => ['key' => '123', 'foo' => null]]];
     $r = mockV1JsonPushQueryResponse($data);
     $m = new MockHttpClient([$r]);
@@ -313,7 +313,7 @@ test('it should emit tombstone objects for tombstone rows', function() {
     $c->stream($pq);
 });
 
-test('it should handle all content type options', function() {
+test('it should handle all content type options', function () {
     $data = [['foo' => 'bar'], ['foo' => 'baz']];
 
     $r = mockDelimittedPushQueryResponse($data);
