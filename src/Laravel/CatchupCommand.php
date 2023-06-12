@@ -25,7 +25,7 @@ class CatchupCommand extends Command
 
         /** @var KsqlResource $resource */
         foreach ($resources as $resource) {
-            $query = new PullQuery($resource->getCatchupQuery());
+            $query = new PullQuery($resource->getKsqlCatchupQuery());
             $client->queryAndEmit($query, $resource->getEventName());
         }
     }

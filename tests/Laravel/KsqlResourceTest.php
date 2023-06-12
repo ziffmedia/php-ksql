@@ -97,7 +97,7 @@ test('it should produce correct catchup queries from table names', function () {
 
         public string $model = TestModel::class;
     };
-    expect($kr->getCatchupQuery())->toBe('SELECT * FROM test WHERE updated_at >= \'2023-01-01T11:55:00+00:00\'');
+    expect($kr->getKsqlCatchupQuery())->toBe('SELECT * FROM test WHERE updated_at >= \'2023-01-01T11:55:00+00:00\'');
 });
 
 test('it should produce correct catchup queries from overridden function', function () {
@@ -108,14 +108,14 @@ test('it should produce correct catchup queries from overridden function', funct
             return 'test';
         }
     };
-    expect($kr->getCatchupQuery())->toBe('test');
+    expect($kr->getKsqlCatchupQuery())->toBe('test');
 });
 
 test('it should throw exceptions when impossible to produce catchup queries', function () {
     $kr = new class extends KsqlResource
     {
     };
-    expect($kr->getCatchupQuery(...))->toThrow(Error::class);
+    expect($kr->getKsqlCatchupQuery(...))->toThrow(Error::class);
 });
 
 test('it should generate correct event names', function () {

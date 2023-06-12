@@ -16,7 +16,7 @@ class FillCommand extends Command
     public function handle()
     {
         $client = app(Client::class);
-        
+
         $resourceManager = app(ResourceManager::class);
         if ($resourceName = $this->argument('resourceName')) {
             $resources = [$resourceManager->$resourceName];

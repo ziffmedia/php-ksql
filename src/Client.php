@@ -68,7 +68,7 @@ class Client
      */
     public function query(string|PullQuery $query): array
     {
-        $this->logger->debug("KSQL QUERY: using content type " . $this->acceptContenType->value);
+        $this->logger->debug('KSQL QUERY: using content type '.$this->acceptContenType->value);
         if (is_string($query)) {
             $query = new PullQuery($query);
         }
@@ -81,7 +81,7 @@ class Client
             $query->query .= ';';
         }
 
-        $this->logger->info("KSQL QUERY: Preparing to execute query " . $query->query);
+        $this->logger->info('KSQL QUERY: Preparing to execute query '.$query->query);
         $response = $this->client->request('POST', '/query-stream', [
             'headers' => [
                 'Accept' => ContentType::APPLICATION_JSON->value,
@@ -92,10 +92,10 @@ class Client
         ]);
 
         $rows = $response->toArray();
-        $this->logger->debug("KSQL QUERY: received " . count($rows) . " query rows");
+        $this->logger->debug('KSQL QUERY: received '.count($rows).' query rows');
         $header = array_shift($rows);
         $query->queryId = $header['queryId'];
-        $this->logger->debug("KSQL QUERY: discovered query id " . $query->queryId);
+        $this->logger->debug('KSQL QUERY: discovered query id '.$query->queryId);
 
         $schema = array_combine($header['columnNames'], $header['columnTypes']);
         $query->schema = $schema;
@@ -112,7 +112,7 @@ class Client
      */
     public function stream(array|PushQuery $query): void
     {
-        $this->logger->debug("KSQL STREAM: using content type " . $this->acceptContenType->value);
+        $this->logger->debug('KSQL STREAM: using content type '.$this->acceptContenType->value);
         $queries = [];
         if (! is_array($query)) {
             $queries[$query->name] = $query;
@@ -136,7 +136,7 @@ class Client
             $hasThrown = false;
             $pendingResponses = [];
             foreach ($queries as $query) {
-                $this->logger->info("KSQL STREAM: Preparing to stream " . $query->query . " (offset: " . $query->offset->name . ") as named query " . $query->name);
+                $this->logger->info('KSQL STREAM: Preparing to stream '.$query->query.' (offset: '.$query->offset->name.') as named query '.$query->name);
                 $requestBody = [
                     'sql' => $query->query,
                     'properties' => [
@@ -156,7 +156,7 @@ class Client
             }
 
             $responseStream = $this->client->stream($pendingResponses);
-            $this->logger->debug("KSQL STREAM: executed " . count($pendingResponses) . " stream queries");
+            $this->logger->debug('KSQL STREAM: executed '.count($pendingResponses).' stream queries');
 
             while ($responseStream->valid()) {
                 $chunk = $responseStream->current();
@@ -164,12 +164,13 @@ class Client
                 $userData = $response->getInfo('user_data');
                 $queryName = $userData['query_name'];
                 $query = $queries[$queryName];
-                $this->logger->debug("KSQL STREAM: received stream chunk for " . $queryName);
+                $this->logger->debug('KSQL STREAM: received stream chunk for '.$queryName);
 
                 try {
                     if ($chunk->isTimeout()) {
                         $responseStream = $this->client->stream($pendingResponses);
-                        $this->logger->debug("KSQL STREAM: received network timeout chunk for " . $queryName . ", restreaming all queries");
+                        $this->logger->debug('KSQL STREAM: received network timeout chunk for '.$queryName.', restreaming all queries');
+
                         continue;
                     }
 
@@ -177,15 +178,15 @@ class Client
                     if (strlen($content)) {
                         $content = $this->parseContent($content);
                         if (is_array($content)) {
-                            $this->logger->debug("KSQL STREAM: succesfully parsed chunk for " . $queryName);
+                            $this->logger->debug('KSQL STREAM: succesfully parsed chunk for '.$queryName);
                             if (isset($content['queryId'])) {
                                 $query->queryId = $content['queryId'];
                                 $schema = array_combine($content['columnNames'], $content['columnTypes']);
                                 $query->schema = $schema;
-                                $this->logger->debug("KSQL STREAM: chunk for " . $queryName . " is a header, discovered query id: " . $query->queryId);
+                                $this->logger->debug('KSQL STREAM: chunk for '.$queryName.' is a header, discovered query id: '.$query->queryId);
                             } else {
                                 if (isset($content['tombstone'])) {
-                                    $this->logger->debug("KSQL STREAM: received tombstone for " . $queryName);
+                                    $this->logger->debug('KSQL STREAM: received tombstone for '.$queryName);
                                     $row = new TombstoneRow(
                                         $query,
                                         array_combine(array_keys($query->schema), $content['tombstone'])
@@ -194,7 +195,7 @@ class Client
                                     $key = empty($keySearch) ? null : $keySearch[0];
                                     $row->key = $key;
                                 } else {
-                                    $this->logger->debug("KSQL STREAM: received record for " . $queryName);
+                                    $this->logger->debug('KSQL STREAM: received record for '.$queryName);
                                     $row = new ResultRow(
                                         $query,
                                         array_combine(array_keys($query->schema), $content)
@@ -207,15 +208,15 @@ class Client
                             }
                         }
                     } else {
-                        $this->logger->debug("KSQL STREAM: chunk for " . $queryName . " had no content");
+                        $this->logger->debug('KSQL STREAM: chunk for '.$queryName.' had no content');
                     }
                     $responseStream->next();
                 } catch (TransportException $e) {
-                    $this->logger->warning("KSQL STREAM: transport exception - " . $e->getMessage());
+                    $this->logger->warning('KSQL STREAM: transport exception - '.$e->getMessage());
                     if (! $this->retryOnNetworkErrors) {
                         throw $e;
                     } else {
-                        $this->logger->info("KSQL STREAM: re-starting streams due to transport exception");
+                        $this->logger->info('KSQL STREAM: re-starting streams due to transport exception');
                         $hasThrown = true;
                         break;
                     }
