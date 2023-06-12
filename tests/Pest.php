@@ -2,6 +2,11 @@
 
 use Symfony\Component\HttpClient\Response\MockResponse;
 
+require_once __DIR__.'/Laravel/TestModel.php';
+require_once __DIR__.'/Laravel/TestCase.php';
+
+uses(\Laravel\TestCase::class)->in(__DIR__.'/Laravel');
+
 function mockPullQueryResponse($rows)
 {
     $rowVals = [];

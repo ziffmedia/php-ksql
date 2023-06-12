@@ -3,6 +3,8 @@
 namespace ZiffMedia\Ksql;
 
 use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -19,12 +21,17 @@ class Client
 
     public function __construct(
         protected string $endpoint,
-        protected string|null $username = null,
-        protected string|null $password = null,
-        protected HttpClientInterface|null $client = null
+        protected ?string $username = null,
+        protected ?string $password = null,
+        protected ?HttpClientInterface $client = null,
+        protected ?LoggerInterface $logger = null
     ) {
         if (! $client) {
             $this->client = HttpClient::create();
+        }
+
+        if (! $this->logger) {
+            $this->logger = new NullLogger();
         }
 
         $this->client = $this->client->withOptions([
@@ -49,6 +56,11 @@ class Client
     public function setAcceptContentType(ContentType $contentType)
     {
         $this->acceptContenType = $contentType;
+    }
+
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
     }
 
     /**
