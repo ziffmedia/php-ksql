@@ -5,18 +5,17 @@ namespace ZiffMedia\Ksql\Laravel;
 use Illuminate\Console\Command;
 use ZiffMedia\Ksql\PullQuery;
 
-class FillCommand extends Command
+class CatchupCommand extends Command
 {
-    protected $signature = 'ksql:fill
-                            {resourceName? : Optional specific resource to fill}
-                            {resourceIds?* : Optional list of specific resource ids to fill}';
+    protected $signature = 'ksql:catchup
+                            {resourceName? : Optional specific resource to catch up}';
 
-    protected $description = 'Consume KSQL entire tables and emit events';
+    protected $description = 'Consume KSQL tables based on deltas in updated_at and emit events';
 
     public function handle()
     {
         $client = app(Client::class);
-        
+
         $resourceManager = app(ResourceManager::class);
         if ($resourceName = $this->argument('resourceName')) {
             $resources = [$resourceManager->$resourceName];
@@ -26,7 +25,7 @@ class FillCommand extends Command
 
         /** @var KsqlResource $resource */
         foreach ($resources as $resource) {
-            $query = new PullQuery($resource->getKsqlFillQuery($this->argument('resourceIds')));
+            $query = new PullQuery($resource->getCatchupQuery());
             $client->queryAndEmit($query, $resource->getEventName());
         }
     }

@@ -70,7 +70,7 @@ class KsqlResource
         return $this->getEventName().'.tombstone';
     }
 
-    public function getCatchupQuery(): string
+    public function getKsqlCatchupQuery(): string
     {
         $latestModel = $this->getLatestModel();
         $dateTime = new Carbon($latestModel->{$latestModel->getUpdatedAtColumn()});

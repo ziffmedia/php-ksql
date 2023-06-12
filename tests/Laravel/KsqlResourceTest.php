@@ -103,7 +103,7 @@ test('it should produce correct catchup queries from table names', function () {
 test('it should produce correct catchup queries from overridden function', function () {
     $kr = new class extends KsqlResource
     {
-        public function getCatchupQuery(): string
+        public function getKsqlCatchupQuery(): string
         {
             return 'test';
         }

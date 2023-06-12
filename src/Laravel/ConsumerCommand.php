@@ -14,11 +14,7 @@ class ConsumerCommand extends Command
 
     public function handle()
     {
-        $client = new Client(
-            config('ksql.endpoint'),
-            config('ksql.auth.username'),
-            config('ksql.auth.password')
-        );
+        $client = app(Client::class);
 
         $resourceManager = app(ResourceManager::class);
         if ($resourceName = $this->argument('resourceName')) {

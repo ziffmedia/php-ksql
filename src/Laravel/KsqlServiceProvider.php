@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use SplFileInfo;
 use Symfony\Component\Finder\Finder;
-use ZiffMedia\Ksql\Client;
+use ZiffMedia\Ksql\Laravel\Client;
 use ZiffMedia\Ksql\ContentType;
 
 class KsqlServiceProvider extends ServiceProvider
@@ -39,7 +39,6 @@ class KsqlServiceProvider extends ServiceProvider
             if (config('ksql.logging.client')) {
                 $client->setLogger(logger()->getLogger());
             }
-
             return $client;
         });
     }
