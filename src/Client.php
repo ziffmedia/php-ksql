@@ -12,6 +12,8 @@ use ZiffMedia\Ksql\Parser\ApplicationJsonParser;
 use ZiffMedia\Ksql\Parser\DelimittedParser;
 use ZiffMedia\Ksql\Parser\ParserInterface;
 use ZiffMedia\Ksql\Parser\V1JsonParser;
+use Exception;
+use Error;
 
 class Client
 {
@@ -234,6 +236,13 @@ class Client
             ContentType::V1_JSON => V1JsonParser::class
         };
 
-        return $parser::parse($content);
+        try {
+            $parsed = $parser::parse($content);
+        } catch (Exception|Error $e) {
+            $this->logger->warning("KSQL STREAM: failed to parse content: " . $content);
+            $parsed = null;
+        }
+
+        return $parsed;
     }
 }
