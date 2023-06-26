@@ -14,9 +14,10 @@ class KsqlServiceProvider extends ServiceProvider
     {
         $this->app->singleton(ResourceManager::class, fn () => new ResourceManager());
 
-        if ($this->app->runningInConsole()) {
+        if ($this->app->runningInConsole() && config('ksql.register_commands')) {
             $this->commands([
                 ConsumerCommand::class,
+                CatchupCommand::class,
                 FillCommand::class,
             ]);
             if (config('ksql.discover_resources') == DiscoverResources::CONSOLE) {

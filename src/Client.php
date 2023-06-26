@@ -70,7 +70,6 @@ class Client
      */
     public function query(string|PullQuery $query): array
     {
-        $this->logger->debug('KSQL QUERY: using content type '.$this->acceptContenType->value);
         if (is_string($query)) {
             $query = new PullQuery($query);
         }
