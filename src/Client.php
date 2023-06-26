@@ -65,6 +65,22 @@ class Client
         $this->logger = $logger;
     }
 
+    public function insert(string $stream, array $values)
+    {
+        $body = json_encode(['target' => $stream]) . "\n";
+        $body .= json_encode($values) . "\n";
+
+        $response = $this->client->request('POST', '/inserts-stream', [
+            'headers' => [
+                'Accept' => ContentType::APPLICATION_JSON->value,
+            ],
+            'body' => $body
+        ]);
+        if ($response->toArray()[0]["status"] != 'ok') {
+            throw new \RuntimeException("insert error");
+        }
+    }
+
     /**
      * @return array|ResultRow[]
      */
