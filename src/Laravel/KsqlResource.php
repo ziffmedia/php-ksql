@@ -22,7 +22,7 @@ class KsqlResource
 
     public Offset $offset = Offset::LATEST;
 
-    public boolean $catchupOnEarliest = false;
+    public bool $catchupOnEarliest = false;
 
     /** @var int seconds to look back for catchup */
     public int $lookback = 300;
