@@ -9,16 +9,10 @@ use ZiffMedia\Ksql\TombstoneRow;
 
 class Client extends KsqlClient
 {
-    /**
-     * @param  PushQuery[]|PushQuery  $query
-     */
-    public function streamAndEmit(array|PushQuery $query): void
+    public function streamAndEmit(PushQuery $query): void
     {
-        if (! is_array($query)) {
-            $query = [$query];
-        }
-
-        $handler = function (ResultRow $row) {
+        $query->handler = function (ResultRow $row) {
+            dd($row);
             if ($row instanceof TombstoneRow) {
                 event($row->query->tombstoneEvent, $row);
             } else {
@@ -26,9 +20,6 @@ class Client extends KsqlClient
             }
         };
 
-        foreach ($query as $q) {
-            $q->handler = $handler;
-        }
         $this->stream($query);
     }
 
