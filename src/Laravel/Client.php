@@ -12,7 +12,6 @@ class Client extends KsqlClient
     public function streamAndEmit(PushQuery $query): void
     {
         $query->handler = function (ResultRow $row) {
-            dd($row);
             if ($row instanceof TombstoneRow) {
                 event($row->query->tombstoneEvent, $row);
             } else {

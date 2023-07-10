@@ -22,11 +22,6 @@ class KsqlResource
 
     public Offset $offset = Offset::LATEST;
 
-    public bool $catchupOnEarliest = false;
-
-    /** @var int seconds to look back for catchup */
-    public int $lookback = 300;
-
     public function handle(ResultRow $data): void
     {
     }
