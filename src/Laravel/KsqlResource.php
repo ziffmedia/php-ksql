@@ -18,13 +18,11 @@ class KsqlResource
 
     public string $ksqlIdField = 'id';
 
-    public bool $catchUpBeforeConsume = false;
-
-    public bool $shouldConsume = true;
-
     public string $model;
 
     public Offset $offset = Offset::LATEST;
+
+    public boolean $catchupOnEarliest = false;
 
     /** @var int seconds to look back for catchup */
     public int $lookback = 300;
@@ -42,17 +40,13 @@ class KsqlResource
         return sprintf('SELECT * FROM %s EMIT CHANGES;', $this->ksqlTable);
     }
 
-    public function getKsqlFillQuery($resourceIds = null): string
+    public function getKsqlFetchQuery($resourceIds): string
     {
-        if ($resourceIds) {
-            if (! ($resourceIds instanceof Collection)) {
-                $resourceIds = collect($resourceIds);
-            }
-
-            return sprintf("SELECT * FROM %s WHERE %s IN ('%s');", $this->ksqlTable, $this->ksqlIdField, $resourceIds->implode("','"));
-        } else {
-            return sprintf('SELECT * FROM %s;', $this->ksqlTable);
+        if (! ($resourceIds instanceof Collection)) {
+            $resourceIds = collect($resourceIds);
         }
+
+        return sprintf("SELECT * FROM %s WHERE %s IN ('%s');", $this->ksqlTable, $this->ksqlIdField, $resourceIds->implode("','"));
     }
 
     public function getKeyName(): string
@@ -68,16 +62,6 @@ class KsqlResource
     public function getTombstoneEventName(): string
     {
         return $this->getEventName().'.tombstone';
-    }
-
-    public function getKsqlCatchupQuery(): string
-    {
-        $latestModel = $this->getLatestModel();
-        $dateTime = new Carbon($latestModel->{$latestModel->getUpdatedAtColumn()});
-        $dateTime->modify("-$this->lookback seconds");
-        $isoString = $dateTime->toIso8601String();
-
-        return sprintf("SELECT * FROM %s WHERE %s >= '%s'", $this->ksqlTable, $this->ksqlUpdatedField, $isoString);
     }
 
     private function getLatestModel(): Model

@@ -16,9 +16,8 @@ class KsqlServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole() && config('ksql.register_commands')) {
             $this->commands([
-                ConsumerCommand::class,
-                CatchupCommand::class,
-                FillCommand::class,
+                StreamCommand::class,
+                FetchCommand::class,
             ]);
             if (config('ksql.discover_resources') == DiscoverResources::CONSOLE) {
                 $this->discoverResources();

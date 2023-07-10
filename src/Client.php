@@ -103,16 +103,15 @@ class Client
         $query->schema = array_combine($parsed[1], $parsed[2]);
 
         $rows = array_map(function ($row) use ($query) {
-            $row = $row["row"]['columns'];
+            $row = $row['row']['columns'];
+
             return new ResultRow($query, array_combine(array_slice(array_keys($query->schema), 0, count($row)), $row));
         }, $rows);
+
         return $rows;
     }
 
-    /**
-     * @param  PushQuery|PushQuery[]  $query
-     */
-    public function stream(array|PushQuery $query): void
+    public function stream(PushQuery $query): void
     {
         $this->logger->debug('KSQL STREAM: using content type '.$this->acceptContenType->value);
         $queries = [];
