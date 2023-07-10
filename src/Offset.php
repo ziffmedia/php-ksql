@@ -2,8 +2,8 @@
 
 namespace ZiffMedia\Ksql;
 
-enum Offset
+enum Offset: string
 {
-    case EARLIEST;
-    case LATEST;
+    case EARLIEST = 'earliest';
+    case LATEST = 'latest';
 }

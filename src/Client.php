@@ -37,7 +37,7 @@ class Client
         }
 
         $this->client = $this->client->withOptions([
-            'http_version' => '2.0',
+            'http_version' => '1.1',
             'base_uri' => $this->endpoint,
         ]);
 
@@ -65,22 +65,6 @@ class Client
         $this->logger = $logger;
     }
 
-    public function insert(string $stream, array $values)
-    {
-        $body = json_encode(['target' => $stream]) . "\n";
-        $body .= json_encode($values) . "\n";
-
-        $response = $this->client->request('POST', '/inserts-stream', [
-            'headers' => [
-                'Accept' => ContentType::APPLICATION_JSON->value,
-            ],
-            'body' => $body
-        ]);
-        if ($response->toArray()[0]["status"] != 'ok') {
-            throw new \RuntimeException("insert error");
-        }
-    }
-
     /**
      * @return array|ResultRow[]
      */
@@ -99,28 +83,29 @@ class Client
         }
 
         $this->logger->info('KSQL QUERY: Preparing to execute query '.$query->query);
-        $response = $this->client->request('POST', '/query-stream', [
+        $response = $this->client->request('POST', '/query', [
             'headers' => [
                 'Accept' => ContentType::APPLICATION_JSON->value,
             ],
             'body' => json_encode([
-                'sql' => $query->query,
+                'ksql' => $query->query,
             ]),
         ]);
 
         $rows = $response->toArray();
         $this->logger->debug('KSQL QUERY: received '.count($rows).' query rows');
-        $header = array_shift($rows);
+        $header = array_shift($rows)['header'];
         $query->queryId = $header['queryId'];
         $this->logger->debug('KSQL QUERY: discovered query id '.$query->queryId);
 
-        $schema = array_combine($header['columnNames'], $header['columnTypes']);
-        $query->schema = $schema;
+        $schemaRaw = $header['schema'];
+        preg_match_all('/`([A-Z_]+)` ([A-Z<>]+)/', $schemaRaw, $parsed);
+        $query->schema = array_combine($parsed[1], $parsed[2]);
 
-        $rows = array_map(function ($row) use ($schema, $query) {
-            return new ResultRow($query, array_combine(array_keys($schema), $row));
+        $rows = array_map(function ($row) use ($query) {
+            $row = $row["row"]['columns'];
+            return new ResultRow($query, array_combine(array_slice(array_keys($query->schema), 0, count($row)), $row));
         }, $rows);
-
         return $rows;
     }
 
@@ -155,13 +140,13 @@ class Client
             foreach ($queries as $query) {
                 $this->logger->info('KSQL STREAM: Preparing to stream '.$query->query.' (offset: '.$query->offset->name.') as named query '.$query->name);
                 $requestBody = [
-                    'sql' => $query->query,
-                    'properties' => [
-                        'auto.offset.reset' => strtolower($query->offset->name),
+                    'ksql' => $query->query,
+                    'streamProperties' => [
+                        'ksql.stream.auto.offset.reset' => strtolower($query->offset->name),
                     ],
                 ];
 
-                $pendingResponses[] = $this->client->request('POST', '/query-stream', [
+                $pendingResponses[] = $this->client->request('POST', '/query', [
                     'body' => json_encode($requestBody),
                     'headers' => [
                         'Accept' => $this->acceptContenType->value,
